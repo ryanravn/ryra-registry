@@ -8,7 +8,7 @@ config templates, scripts, and tests). Cross-cutting lifecycle tests live under
 
 `ryra` fetches this repo on demand the first time you run `ryra add <service>`
 or `ryra search`, and pulls updates with `ryra registry update`. To use a
-different registry as the default, set the `RYRA_DEFAULT_REGISTRY` env var to a
+different registry as the default, set the `RYRA_REGISTRY_DIR` env var to a
 local directory.
 
 Add your own registry alongside this one with:

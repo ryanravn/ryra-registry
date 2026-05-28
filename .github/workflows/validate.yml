@@ -28,8 +28,8 @@ jobs:
           key: ryra-main
 
       # Build from main rather than installing the release tarball so
-      # the CI tracks current ryra semantics (the RYRA_DEFAULT_REGISTRY
-      # env override below didn't exist in 0.3.3).
+      # the CI tracks current ryra semantics (the RYRA_REGISTRY_DIR env
+      # override below didn't exist in 0.3.3).
       - name: Build ryra from main
         run: cargo install --git https://github.com/ryanravn/ryra --branch main --locked ryra
 
@@ -37,12 +37,12 @@ jobs:
         env:
           # Point ryra at this checkout instead of cloning the published
           # registry; that's the whole reason this workflow exists.
-          RYRA_DEFAULT_REGISTRY: ${{ github.workspace }}
+          RYRA_REGISTRY_DIR: ${{ github.workspace }}
         run: ryra search
 
       - name: Validate test.toml files
         env:
-          RYRA_DEFAULT_REGISTRY: ${{ github.workspace }}
+          RYRA_REGISTRY_DIR: ${{ github.workspace }}
         # `ryra test list` auto-discovers tests from ./registry, so
         # we expose the checkout via a self-symlink. The walker doesn't
         # recurse through the symlink (it descends into per-service
