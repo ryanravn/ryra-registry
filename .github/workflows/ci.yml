@@ -1,0 +1,219 @@
+name: CI
+
+# Three stages, each runs only when the previous succeeds:
+#
+#  1. validate  — builds ryra from main and runs `ryra search` /
+#     `ryra test list` against this checkout, so every service.toml and
+#     test.toml has to parse and pass ryra-core's validators. The built
+#     binary is uploaded as an artifact so the e2e jobs don't rebuild.
+#
+#  2. detect-changes — diffs against the base (PR target branch or
+#     HEAD~1 on main push) and emits two lists: changed service folders
+#     and changed cross-cutting tests under tests/.
+#
+#  3. e2e-service / e2e-test — matrix jobs that run `ryra test --no-vm`
+#     for each changed item. Skip a service whose test.toml is empty or
+#     missing (the workflow warns via ::notice:: but doesn't fail —
+#     tests aren't mandatory in this registry).
+#
+# The e2e jobs install rootless podman + crun, enable lingering for
+# the runner user so `systemctl --user` works from non-login shells,
+# and set XDG_RUNTIME_DIR so the user-bus is reachable. ryra-test's
+# LocalExecutor handles the rest: it scopes every command with
+# RYRA_REGISTRY_DIR pointing at this checkout, bypassing the github.com
+# clone. A registry/ self-symlink covers ryra-test's auto-discovery,
+# which only looks at ./registry and ./crates/ryra-core/registry.
+#
+# Caveats:
+#   - cargo install --git rebuilds when the cargo cache misses; warm
+#     caches finish in ~30s, cold in ~3min.
+#   - GitHub-hosted runners have 16GB RAM. Resource-heavy services
+#     (supabase, immich) may OOM. If they do, add per-test gating in
+#     the service's test.toml (TODO when we hit it).
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ryra-main
+
+      - name: Build ryra from main
+        run: |
+          cargo install \
+            --git https://github.com/ryanravn/ryra \
+            --branch main \
+            --locked \
+            --root /tmp/ryra-out \
+            ryra
+          echo "/tmp/ryra-out/bin" >> "$GITHUB_PATH"
+
+      - name: Validate service.toml files
+        env:
+          RYRA_REGISTRY_DIR: ${{ github.workspace }}
+        run: ryra search
+
+      - name: Validate test.toml files
+        env:
+          RYRA_REGISTRY_DIR: ${{ github.workspace }}
+        # ryra test list auto-discovers from ./registry; a self-symlink
+        # exposes this checkout under that name. Safe — the walker
+        # doesn't recurse through the symlink.
+        run: |
+          ln -s . registry
+          ryra test list
+
+      - name: Share ryra binary with e2e jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: ryra-binary
+          path: /tmp/ryra-out/bin/ryra
+          if-no-files-found: error
+          retention-days: 1
+
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.compute.outputs.services }}
+      tests: ${{ steps.compute.outputs.tests }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: compute
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "${{ github.event.pull_request.base.ref }}" --depth=1
+            base="origin/${{ github.event.pull_request.base.ref }}"
+          else
+            base="HEAD~1"
+          fi
+          changed=$(git diff --name-only "$base" HEAD || true)
+          echo "Changed files:"
+          echo "$changed" | sed 's/^/  /'
+
+          # Top-level dir of every changed path that's an actual
+          # service folder (has a service.toml). Filters out 'tests/'
+          # and '.github/', and dropped/renamed services that no longer
+          # exist on this ref.
+          services=$(echo "$changed" \
+            | awk -F/ 'NF >= 2 && $1 != "tests" && $1 != ".github" {print $1}' \
+            | sort -u \
+            | while read -r d; do
+                [ -f "$d/service.toml" ] && echo "$d"
+              done \
+            | jq -R . | jq -sc .)
+
+          # tests/<name>.toml → cross-cutting test name (file stem).
+          tests=$(echo "$changed" \
+            | awk -F/ '$1 == "tests" && $2 ~ /\.toml$/ {sub(/\.toml$/, "", $2); print $2}' \
+            | sort -u \
+            | jq -R . | jq -sc .)
+
+          echo "services=$services" >> "$GITHUB_OUTPUT"
+          echo "tests=$tests" >> "$GITHUB_OUTPUT"
+          echo "Will run:"
+          echo "  services: $services"
+          echo "  tests:    $tests"
+
+  e2e-service:
+    needs: [validate, detect-changes]
+    if: needs.detect-changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.detect-changes.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip if service has no tests
+        id: gate
+        run: |
+          tf="${{ matrix.service }}/test.toml"
+          if [ ! -f "$tf" ] || ! grep -q '^\[\[tests\]\]' "$tf"; then
+            echo "::notice title=No e2e for ${{ matrix.service }}::Define [[tests]] in $tf to enable e2e in CI."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.gate.outputs.skip != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: ryra-binary
+          path: /tmp/ryra-bin
+
+      - if: steps.gate.outputs.skip != 'true'
+        name: Install ryra + rootless podman + systemd user session
+        run: |
+          chmod +x /tmp/ryra-bin/ryra
+          echo "/tmp/ryra-bin" >> "$GITHUB_PATH"
+
+          sudo apt-get update
+          sudo apt-get install -y podman uidmap dbus-user-session crun
+
+          # systemctl --user requires either a login session OR linger.
+          # GitHub runners shell us in non-interactively, so linger is
+          # the only path that works.
+          sudo loginctl enable-linger "$USER"
+          # Give logind a beat to spin up the user bus before we touch it.
+          sleep 2
+
+      - if: steps.gate.outputs.skip != 'true'
+        name: ryra test --no-vm ${{ matrix.service }}
+        env:
+          RYRA_REGISTRY_DIR: ${{ github.workspace }}
+        run: |
+          ln -s . registry
+          export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+          ryra test --no-vm --yes "${{ matrix.service }}"
+
+  e2e-test:
+    needs: [validate, detect-changes]
+    if: needs.detect-changes.outputs.tests != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJSON(needs.detect-changes.outputs.tests) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: ryra-binary
+          path: /tmp/ryra-bin
+
+      - name: Install ryra + rootless podman + systemd user session
+        run: |
+          chmod +x /tmp/ryra-bin/ryra
+          echo "/tmp/ryra-bin" >> "$GITHUB_PATH"
+
+          sudo apt-get update
+          sudo apt-get install -y podman uidmap dbus-user-session crun
+
+          sudo loginctl enable-linger "$USER"
+          sleep 2
+
+      - name: ryra test --no-vm ${{ matrix.test }}
+        env:
+          RYRA_REGISTRY_DIR: ${{ github.workspace }}
+        run: |
+          ln -s . registry
+          export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+          ryra test --no-vm --yes "${{ matrix.test }}"
