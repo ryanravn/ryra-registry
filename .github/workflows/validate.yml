@@ -1,0 +1,44 @@
+name: Validate registry
+
+# Runs ryra against the registry to confirm every service.toml and
+# test.toml parses and passes ryra-core's validators. Catches things
+# like duplicate ports, malformed env-var names, unknown step actions,
+# or referenced quadlet files that don't exist.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install latest ryra release
+        run: |
+          curl -fsSL https://ryra.dev/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Validate service.toml files
+        env:
+          # Point ryra at this checkout instead of cloning the published
+          # registry; that's the whole reason this workflow exists.
+          RYRA_DEFAULT_REGISTRY: ${{ github.workspace }}
+        run: ryra search
+
+      - name: Validate test.toml files
+        env:
+          RYRA_DEFAULT_REGISTRY: ${{ github.workspace }}
+        # `ryra test list` auto-discovers tests from ./registry, so
+        # we expose the checkout via a self-symlink. The walker doesn't
+        # recurse through the symlink (it descends into per-service
+        # dirs and stops), so this is safe.
+        run: |
+          ln -s . registry
+          ryra test list
