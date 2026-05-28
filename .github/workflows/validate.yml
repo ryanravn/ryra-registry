@@ -20,10 +20,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install latest ryra release
-        run: |
-          curl -fsSL https://ryra.dev/install.sh | sh
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # Share the cargo registry/cache with anyone else building
+          # ryra from source against main.
+          key: ryra-main
+
+      # Build from main rather than installing the release tarball so
+      # the CI tracks current ryra semantics (the RYRA_DEFAULT_REGISTRY
+      # env override below didn't exist in 0.3.3).
+      - name: Build ryra from main
+        run: cargo install --git https://github.com/ryanravn/ryra --branch main --locked ryra
 
       - name: Validate service.toml files
         env:
