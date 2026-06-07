@@ -7,10 +7,10 @@ After=ente-postgres.service ente-minio.service
 Wants=ente-web.service
 
 [Container]
-Image=ghcr.io/ente-io/server:7be2c66fb69517eb1a2f67b0d94cc72817687df9
+Image=ghcr.io/ente-io/server@sha256:6a1a76df708c29affb833cf2a89f1b4b318f58f15e64cb0249e76cd8cd1df304
 ContainerName=ente-museum
 Network=ente.network:alias=museum
-PublishPort=${RYRA_PORT_HTTP}:8080
+PublishPort=${SERVICE_PORT_HTTP}:8080
 Pull=missing
 EnvironmentFile=%h/.local/share/services/ente/.env
 HealthCmd=curl -sSfL -o /dev/null http://localhost:8080/ping

@@ -6,12 +6,12 @@ Requires=ente.service
 After=ente.service
 
 [Container]
-Image=ghcr.io/ente-io/web:b4d22996c85e8080b487db1475f98487b9b10840
+Image=ghcr.io/ente-io/web@sha256:51c6c801093aedd899f68ee40b70fc2dadf423ae0e15b5b3764e40c84c2b9766
 ContainerName=ente-web
 Network=ente.network
-PublishPort=${RYRA_PORT_PHOTOS}:3000
-PublishPort=${RYRA_PORT_ALBUMS}:3002
-PublishPort=${RYRA_PORT_AUTH}:3003
+PublishPort=${SERVICE_PORT_PHOTOS}:3000
+PublishPort=${SERVICE_PORT_ALBUMS}:3002
+PublishPort=${SERVICE_PORT_AUTH}:3003
 Pull=missing
 EnvironmentFile=%h/.local/share/services/ente/.env
 HealthCmd=curl -sSfL -o /dev/null http://localhost:3000

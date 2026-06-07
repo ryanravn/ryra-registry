@@ -8,13 +8,19 @@ architecture = ["amd64", "arm64"]
 min = 512
 recommended = 1024
 
+# Museum API. Over Tailscale it answers at https://<svc>.<tailnet>.ts.net:8080;
+# the browser SPA is pointed here via ENTE_API_ORIGIN below.
 [[ports]]
 name = "http"
 container_port = 8080
+tailscale_https = 8080
 
+# Photos web UI — the web root. Over Tailscale it answers at the bare
+# https://<svc>.<tailnet>.ts.net (443), matching the seafile/authelia convention.
 [[ports]]
 name = "photos"
 container_port = 3000
+tailscale_https = 443
 
 [[ports]]
 name = "albums"
@@ -23,6 +29,15 @@ container_port = 3002
 [[ports]]
 name = "auth"
 container_port = 3003
+
+# MinIO S3 object storage. Ente uploads/downloads go *directly* from the
+# browser to S3, so MinIO must be browser-reachable. Over Tailscale it answers
+# at https://<svc>.<tailnet>.ts.net:3200; museum signs presigned URLs against
+# this same host (and reaches it too). The S3 endpoint below points here.
+[[ports]]
+name = "minio"
+container_port = 3200
+tailscale_https = 3200
 
 # --- Shared (Postgres) ---
 
@@ -51,6 +66,17 @@ value = "{{secret.minio_password}}"
 
 # --- Museum (API server) ---
 
+# Browser-facing museum endpoint. The ente-io/web image bakes a placeholder
+# into its static JS at build time and rewrites it to $ENTE_API_ORIGIN on
+# container start — so this must be the URL the *browser* reaches museum at,
+# not the in-network `museum:8080`. Resolves to the museum port's public URL
+# in every mode: loopback (host only), the raw `--url` (e.g. a tailnet IP), or
+# — with `--tailscale` — https://<svc>.<tailnet>.ts.net:8080 while the bare
+# hostname serves the Photos UI.
+[[env]]
+name = "ENTE_API_ORIGIN"
+value = "{{service.port_url.http}}"
+
 [[env]]
 name = "ENTE_DB_HOST"
 value = "postgres"
@@ -75,17 +101,29 @@ value = "{{secret.db_password}}"
 name = "ENTE_DB_SSLMODE"
 value = "disable"
 
+# Ente's libsodium keys: base64 of an exact byte count (encryption=32, hash=64),
+# matching `openssl rand -base64 N`. Museum base64-decodes these and rejects any
+# other length with "invalid key length" (which blocks email verification). A
+# plain string/hex secret decodes to the wrong size — must be `base64`.
 [[env]]
 name = "ENTE_KEY_ENCRYPTION"
 value = "{{secret.key_encryption}}"
+format = "base64"
+length = 32
 
 [[env]]
 name = "ENTE_KEY_HASH"
 value = "{{secret.key_hash}}"
+format = "base64"
+length = 64
 
+# jwt.secret is decoded with Go's URL-safe base64 (rejects +/), unlike the two
+# keys above (standard base64) — see museum main.go.
 [[env]]
 name = "ENTE_JWT_SECRET"
 value = "{{secret.jwt_secret}}"
+format = "base64_url"
+length = 32
 
 # S3 storage — all three "providers" point to the local MinIO instance.
 # Ente museum requires all three to be configured even for self-hosted.
@@ -108,7 +146,7 @@ value = "{{secret.minio_password}}"
 
 [[env]]
 name = "ENTE_S3_B2_EU_CEN_ENDPOINT"
-value = "minio:3200"
+value = "{{service.port_url.minio}}"
 
 [[env]]
 name = "ENTE_S3_B2_EU_CEN_REGION"
@@ -128,7 +166,7 @@ value = "{{secret.minio_password}}"
 
 [[env]]
 name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_ENDPOINT"
-value = "minio:3200"
+value = "{{service.port_url.minio}}"
 
 [[env]]
 name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_REGION"
@@ -152,7 +190,7 @@ value = "{{secret.minio_password}}"
 
 [[env]]
 name = "ENTE_S3_SCW_EU_FR_V3_ENDPOINT"
-value = "minio:3200"
+value = "{{service.port_url.minio}}"
 
 [[env]]
 name = "ENTE_S3_SCW_EU_FR_V3_REGION"
@@ -168,4 +206,17 @@ value = ""
 
 [integrations]
 auth = []
-smtp = false
+smtp = true
+
+# Museum sends account-verification and login OTP codes by email. Without
+# SMTP these only appear in the museum logs; with it, signup/login codes are
+# delivered to the user's inbox. Wired to the global SMTP relay — toggle per
+# install with `ryra configure ente --smtp` / `--no-smtp`. (Password recovery
+# itself is the client-side recovery key, not an email flow — Ente is E2E.)
+[mappings.smtp]
+ENTE_SMTP_HOST = "{{smtp.host}}"
+ENTE_SMTP_PORT = "{{smtp.port}}"
+ENTE_SMTP_USERNAME = "{{smtp.username}}"
+ENTE_SMTP_PASSWORD = "{{smtp.password}}"
+ENTE_SMTP_EMAIL = "{{smtp.from}}"
+ENTE_SMTP_ENCRYPTION = "{{ smtp.security | ente_smtp_encryption }}"

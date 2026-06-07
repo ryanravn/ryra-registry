@@ -1,4 +1,4 @@
-# ente tests — install only (API + photos web).
+# ente tests — install (API + photos web) and SMTP verification-email delivery.
 
 [[tests]]
 name = "ente"
@@ -11,14 +11,14 @@ service = "ente"
 [[tests.steps]]
 action = "http"
 name = "api-ping"
-url = "http://localhost:$RYRA_PORT_HTTP/ping"
+url = "http://localhost:$SERVICE_PORT_HTTP/ping"
 service = "ente"
 poll = { interval = 2, attempts = 60 }
 timeout = 150
 [[tests.steps]]
 action = "http"
 name = "photos-web"
-url = "http://localhost:$RYRA_PORT_PHOTOS/"
+url = "http://localhost:$SERVICE_PORT_PHOTOS/"
 service = "ente"
 poll = { interval = 2, attempts = 30 }
 timeout = 90
@@ -27,3 +27,45 @@ action = "shell"
 name = "data-dir-created"
 run = "test -d $HOME/.local/share/services/ente"
 timeout = 5
+
+# SMTP: museum emails the signup/login verification (OTT) code. Without SMTP it
+# logs "Skipping sending email"; with --smtp=inbucket it must deliver. Requesting
+# an OTT for any email triggers the send — no account needed. The email subject
+# is "ente Verification Code".
+[[tests]]
+name = "smtp"
+[[tests.steps]]
+action = "add"
+service = "ente"
+args = "--smtp=inbucket"
+timeout = 300
+[[tests.steps]]
+action = "wait"
+service = "ente"
+[[tests.steps]]
+action = "http"
+name = "api-ping"
+url = "http://localhost:$SERVICE_PORT_HTTP/ping"
+service = "ente"
+poll = { interval = 2, attempts = 60 }
+timeout = 150
+[[tests.steps]]
+action = "shell"
+name = "request-verification-code"
+run = """for i in $(seq 1 15); do
+  code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
+    http://localhost:$SERVICE_PORT_HTTP/users/ott \
+    -H 'Content-Type: application/json' \
+    -d '{"email":"smtptest@example.com","client":"web","purpose":"signup"}')
+  [ "$code" = "200" ] && exit 0
+  sleep 2
+done
+exit 1"""
+timeout = 40
+[[tests.steps]]
+action = "mail"
+name = "verification-email-delivered"
+mailbox = "smtptest"
+contains = "Verification Code"
+poll = { interval = 2, attempts = 30 }
+timeout = 90

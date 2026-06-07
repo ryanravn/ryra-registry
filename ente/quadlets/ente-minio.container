@@ -7,9 +7,15 @@ StartLimitBurst=3
 Image=docker.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
 ContainerName=ente-minio
 Network=ente.network:alias=minio
+# Publish to loopback only; Tailscale serve fronts it on the tailnet (HTTPS).
+PublishPort=127.0.0.1:${SERVICE_PORT_MINIO}:3200
 Volume=%h/.local/share/services/ente/minio-data:/data:Z,U
 Exec=server /data --address :3200 --console-address :3201
 Pull=missing
+# Browser uploads/downloads are cross-origin (Photos app → S3) and arrive via a
+# redirect that sends `Origin: null`, so reflect any origin. Access is still
+# gated by the S3 presigned-URL signature; CORS is not the security boundary.
+Environment=MINIO_API_CORS_ALLOW_ORIGIN=*
 EnvironmentFile=%h/.local/share/services/ente/.env
 HealthCmd=mc ready local || exit 1
 HealthStartPeriod=15s
