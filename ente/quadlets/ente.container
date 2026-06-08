@@ -13,7 +13,11 @@ Network=ente.network:alias=museum
 PublishPort=${SERVICE_PORT_HTTP}:8080
 Pull=missing
 EnvironmentFile=%h/.local/share/services/ente/.env
-HealthCmd=curl -sSfL -o /dev/null http://localhost:8080/ping
+# The museum (server) image is busybox-based and ships wget, not curl —
+# a curl healthcheck fails with "curl: not found" and the container is
+# stuck `unhealthy` forever despite serving fine. (ente-web's image does
+# have curl, so it keeps the curl check below.)
+HealthCmd=wget -q -O /dev/null http://localhost:8080/ping
 HealthInterval=10s
 HealthTimeout=5s
 HealthRetries=5
