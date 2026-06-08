@@ -204,9 +204,20 @@ value = "scw-eu-fr-v3"
 name = "ENTE_CREDENTIALS_FILE"
 value = ""
 
+[backup]
+# Cold backup: backup-pre.sh stops the stack so postgres flushes WAL and
+# the MinIO object store is quiescent, then restic copies the consistent
+# db-data (account/file metadata) + minio-data (the E2E-encrypted photo
+# objects). restore-post.sh sequences postgres + minio up before museum.
+# Rendered config is regenerated on install, so only the two data dirs
+# are captured. (Ente is client-side encrypted; the server backup is just
+# the DB + object store — there is no separate Ente backup tool.)
+paths = ["db-data", "minio-data"]
+
 [integrations]
 auth = []
 smtp = true
+backup = true
 
 # Museum sends account-verification and login OTP codes by email. Without
 # SMTP these only appear in the museum logs; with it, signup/login codes are
