@@ -33,12 +33,12 @@ action = "shell"
 name = "remove-preserves-data"
 run = """set -e
 ryra remove vikunja -y
-test -d ~/.local/share/services/vikunja
+test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja
 # .env must be gone (ephemeral)
-! test -f ~/.local/share/services/vikunja/.env
+! test -f ${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/.env
 # Bind-mount data directories must still exist
-test -d ~/.local/share/services/vikunja/db
-test -d ~/.local/share/services/vikunja/files
+test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/db
+test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/files
 """
 timeout = 60
 
@@ -57,7 +57,7 @@ action = "shell"
 name = "purge-cleans-up"
 run = """set -e
 ryra remove vikunja --purge -y
-! test -d ~/.local/share/services/vikunja
+! test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja
 """
 timeout = 60
 

@@ -14,7 +14,11 @@ PublishPort=${SERVICE_PORT_HTTP}:3000
 # replacement and is inspectable from the host.
 Volume=%h/.local/share/services/docuseal/data:/data:Z,U
 EnvironmentFile=%h/.local/share/services/docuseal/.env
-HealthCmd=wget -qO- http://localhost:3000/up >/dev/null || exit 1
+# Probe 127.0.0.1, not localhost: the container's /etc/hosts maps localhost to
+# both 127.0.0.1 and ::1, wget tries ::1 first, and docuseal binds IPv4-only
+# (0.0.0.0:3000). localhost would get connection-refused forever, so the
+# container could never go healthy.
+HealthCmd=wget -qO- http://127.0.0.1:3000/up >/dev/null || exit 1
 HealthStartPeriod=30s
 HealthInterval=15s
 HealthRetries=5

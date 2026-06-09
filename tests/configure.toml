@@ -28,7 +28,7 @@ timeout = 120
 action = "shell"
 name = "backup-toggle"
 run = """set -e
-META=~/.local/share/services/vikunja/metadata.toml
+META=${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/metadata.toml
 ryra configure vikunja --backup -y
 grep -q '^backup_enabled = true$' "$META"
 ryra configure vikunja --no-backup -y
@@ -51,7 +51,7 @@ timeout = 30
 action = "shell"
 name = "dry-run-makes-no-change"
 run = """set -e
-META=~/.local/share/services/vikunja/metadata.toml
+META=${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/metadata.toml
 ryra configure vikunja --backup --dry-run | grep -q 'Dry run'
 ! grep -q '^backup_enabled' "$META"
 """
@@ -63,8 +63,8 @@ timeout = 30
 action = "shell"
 name = "enable-group"
 run = """set -e
-ENV=~/.local/share/services/vikunja/.env
-META=~/.local/share/services/vikunja/metadata.toml
+ENV=${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/.env
+META=${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/metadata.toml
 ryra configure vikunja --enable todoist \\
     --set VIKUNJA_MIGRATION_TODOIST_CLIENTID=test-id \\
     --set VIKUNJA_MIGRATION_TODOIST_CLIENTSECRET=test-secret -y
@@ -80,8 +80,8 @@ timeout = 90
 action = "shell"
 name = "disable-group"
 run = """set -e
-ENV=~/.local/share/services/vikunja/.env
-META=~/.local/share/services/vikunja/metadata.toml
+ENV=${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/.env
+META=${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/metadata.toml
 ryra configure vikunja --disable todoist -y
 ! grep -q '^VIKUNJA_MIGRATION_TODOIST_' "$ENV"
 ! grep -q '"todoist"' "$META"

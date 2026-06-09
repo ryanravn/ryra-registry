@@ -6,4 +6,8 @@
 set -euo pipefail
 systemctl --user stop vikunja.service || true
 sleep 2
-rm -rf "$SERVICE_HOME/db" "$SERVICE_HOME/files"
+# `podman unshare` is required because the bind-mounts use `:U` — podman
+# chowns db/ and files/ to the container's mapped subuid, which the host
+# user can't recurse into to delete. Inside the user namespace that
+# mapping is reversed, so rm has the equivalent of root over it.
+podman unshare rm -rf "$SERVICE_HOME/db" "$SERVICE_HOME/files"

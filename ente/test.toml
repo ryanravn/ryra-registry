@@ -25,13 +25,13 @@ timeout = 90
 [[tests.steps]]
 action = "shell"
 name = "data-dir-created"
-run = "test -d $HOME/.local/share/services/ente"
+run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/ente"
 timeout = 5
 
 # SMTP: museum emails the signup/login verification (OTT) code. Without SMTP it
 # logs "Skipping sending email"; with --smtp=inbucket it must deliver. Requesting
 # an OTT for any email triggers the send — no account needed. The email subject
-# is "ente Verification Code".
+# is "Verification code: <NNNNNN>" (lowercase "code"; match is case-sensitive).
 [[tests]]
 name = "smtp"
 [[tests.steps]]
@@ -52,7 +52,10 @@ timeout = 150
 [[tests.steps]]
 action = "shell"
 name = "request-verification-code"
-run = """for i in $(seq 1 15); do
+# Shell steps don't auto-source the service .env (only http/mail steps do),
+# so pull in $SERVICE_PORT_HTTP ourselves — otherwise curl hits port 80.
+run = """set -a; . "${RYRA_DATA_DIR:-$HOME/.local/share/services}/ente/.env"; set +a
+for i in $(seq 1 15); do
   code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
     http://localhost:$SERVICE_PORT_HTTP/users/ott \
     -H 'Content-Type: application/json' \
@@ -66,6 +69,6 @@ timeout = 40
 action = "mail"
 name = "verification-email-delivered"
 mailbox = "smtptest"
-contains = "Verification Code"
+contains = "Verification code"
 poll = { interval = 2, attempts = 30 }
 timeout = 90

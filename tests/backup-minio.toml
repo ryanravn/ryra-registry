@@ -15,28 +15,21 @@
 name = "backup-minio-lifecycle"
 ram = 2048
 
-# 0. Ensure restic is on PATH. Newly-prepared images install it via
-#    cloud-init (see Distro::cloud_init_packages), but cached images
-#    from before that change won't have it — and there's no cache
-#    versioning yet to force a rebuild. The fallback `dnf install`
-#    is a no-op when restic is already present.
+# 0. restic must be on PATH. Prepared VM images install it via cloud-init
+#    (see Distro::cloud_init_packages); host runs need it installed already.
+#    We don't install it ourselves — that needs sudo, and host tests must
+#    never escalate. Error loudly if it's missing.
 [[steps]]
 action = "shell"
 name = "ensure-restic"
 run = """set -euo pipefail
-if ! command -v restic >/dev/null; then
-    if command -v dnf >/dev/null; then
-        sudo dnf install -y restic
-    elif command -v apt-get >/dev/null; then
-        sudo apt-get update -qq && sudo apt-get install -y restic
-    else
-        echo "no recognised package manager and restic is missing" >&2
-        exit 1
-    fi
-fi
+command -v restic >/dev/null || {
+    echo "restic not found on PATH. Install it (dnf install restic / apt install restic) and re-run." >&2
+    exit 1
+}
 restic version
 """
-timeout = 180
+timeout = 30
 
 # 1. Install MinIO — the S3 backend.
 [[steps]]
@@ -66,7 +59,7 @@ timeout = 180
 action = "shell"
 name = "configure-backup"
 run = """set -euo pipefail
-MINIO_ENV=$HOME/.local/share/services/minio/.env
+MINIO_ENV=${RYRA_DATA_DIR:-$HOME/.local/share/services}/minio/.env
 ROOT_USER=$(grep '^MINIO_ROOT_USER=' $MINIO_ENV | cut -d= -f2-)
 ROOT_PWD=$(grep '^MINIO_ROOT_PASSWORD=' $MINIO_ENV | cut -d= -f2-)
 PORT=$(grep '^SERVICE_PORT_HTTP=' $MINIO_ENV | cut -d= -f2-)
@@ -94,17 +87,19 @@ action = "wait"
 service = "vikunja"
 timeout = 180
 
-# 4. Plant a sentinel file in vikunja's user-data directory. Anything
-#    under files/ counts as data per the classifier, so restic will
-#    include it in the snapshot.
+# 4. Plant a sentinel file in vikunja's user-data directory. vikunja's
+#    files/ is bind-mounted `:U`, so it's owned by the container's (sub)uid
+#    and not writable by the host user — write through `podman unshare`,
+#    which maps us to namespace-root. restic can still *read* it (the dir is
+#    group/other-readable), so the snapshot captures it.
 [[steps]]
 action = "shell"
 name = "plant-sentinel"
 run = """set -euo pipefail
-FILES=$HOME/.local/share/services/vikunja/files
-test -d $FILES
-echo "original-content" > $FILES/sentinel.txt
-test "$(cat $FILES/sentinel.txt)" = "original-content"
+FILES=${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/files
+test -d "$FILES"
+podman unshare bash -c "echo original-content > '$FILES/sentinel.txt'"
+test "$(podman unshare cat "$FILES/sentinel.txt")" = "original-content"
 """
 timeout = 30
 
@@ -145,9 +140,9 @@ timeout = 60
 action = "shell"
 name = "mutate-sentinel"
 run = """set -euo pipefail
-FILES=$HOME/.local/share/services/vikunja/files
-echo "mutated-content" > $FILES/sentinel.txt
-test "$(cat $FILES/sentinel.txt)" = "mutated-content"
+FILES=${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/files
+podman unshare bash -c "echo mutated-content > '$FILES/sentinel.txt'"
+test "$(podman unshare cat "$FILES/sentinel.txt")" = "mutated-content"
 """
 timeout = 30
 
@@ -170,8 +165,8 @@ timeout = 180
 action = "shell"
 name = "verify-restored"
 run = """set -euo pipefail
-FILES=$HOME/.local/share/services/vikunja/files
-ACTUAL=$(cat $FILES/sentinel.txt)
+FILES=${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/files
+ACTUAL=$(podman unshare cat "$FILES/sentinel.txt")
 test "$ACTUAL" = "original-content" || {
     echo "Expected 'original-content', got '$ACTUAL'"
     exit 1

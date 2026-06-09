@@ -14,14 +14,13 @@ ram = 2048
 action = "shell"
 name = "ensure-restic"
 run = """set -euo pipefail
-if ! command -v restic >/dev/null; then
-    if command -v apt-get >/dev/null; then sudo apt-get update -qq && sudo apt-get install -y restic
-    elif command -v dnf >/dev/null; then sudo dnf install -y restic
-    else echo "no package manager and restic missing" >&2; exit 1; fi
-fi
+command -v restic >/dev/null || {
+    echo "restic not found on PATH. Install it (dnf install restic / apt install restic) and re-run." >&2
+    exit 1
+}
 restic version
 """
-timeout = 180
+timeout = 30
 
 [[steps]]
 action = "add"
@@ -45,7 +44,7 @@ timeout = 180
 action = "shell"
 name = "configure-backup"
 run = """set -euo pipefail
-MINIO_ENV=$HOME/.local/share/services/minio/.env
+MINIO_ENV=${RYRA_DATA_DIR:-$HOME/.local/share/services}/minio/.env
 ROOT_USER=$(grep '^MINIO_ROOT_USER=' $MINIO_ENV | cut -d= -f2-)
 ROOT_PWD=$(grep '^MINIO_ROOT_PASSWORD=' $MINIO_ENV | cut -d= -f2-)
 PORT=$(grep '^SERVICE_PORT_HTTP=' $MINIO_ENV | cut -d= -f2-)
@@ -70,9 +69,10 @@ timeout = 180
 action = "shell"
 name = "plant-sentinel"
 run = """set -euo pipefail
-FILES=$HOME/.local/share/services/vikunja/files
-test -d $FILES
-echo "original-content" > $FILES/sentinel.txt
+# files/ is bind-mounted :U (container-owned), so write via `podman unshare`.
+FILES=${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/files
+test -d "$FILES"
+podman unshare bash -c "echo original-content > '$FILES/sentinel.txt'"
 """
 timeout = 30
 
@@ -94,12 +94,14 @@ name = "wipe-install"
 run = """set -euo pipefail
 systemctl --user stop vikunja.service || true
 sleep 2
-rm -rf $HOME/.local/share/services/vikunja
+# db/ and files/ are bind-mounted :U (container-owned, UID-shifted), so the
+# unprivileged user can't rm them directly — wipe via `podman unshare`.
+podman unshare rm -rf ${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja
 rm -f $HOME/.config/containers/systemd/vikunja.container \\
       $HOME/.config/containers/systemd/vikunja.network
 systemctl --user daemon-reload
 # prove it's gone
-test ! -e $HOME/.local/share/services/vikunja
+test ! -e ${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja
 echo "vikunja install wiped"
 """
 timeout = 60
@@ -122,10 +124,10 @@ timeout = 180
 action = "shell"
 name = "verify-recovered"
 run = """set -euo pipefail
-test -f $HOME/.local/share/services/vikunja/metadata.toml
+test -f ${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/metadata.toml
 test -L $HOME/.config/containers/systemd/vikunja.container
 systemctl --user is-active vikunja.service
-ACTUAL=$(cat $HOME/.local/share/services/vikunja/files/sentinel.txt)
+ACTUAL=$(podman unshare cat "${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/files/sentinel.txt")
 test "$ACTUAL" = "original-content" || { echo "sentinel = '$ACTUAL'"; exit 1; }
 echo "DR recovery verified"
 """

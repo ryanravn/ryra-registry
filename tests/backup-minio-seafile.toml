@@ -16,21 +16,15 @@
 name = "backup-minio-seafile-lifecycle"
 ram = 4096
 
-# 0. Ensure restic is on PATH.
+# 0. restic must be on PATH (no sudo install — host tests never escalate).
 [[steps]]
 action = "shell"
 name = "ensure-restic"
 run = """set -euo pipefail
-if ! command -v restic >/dev/null; then
-    if command -v dnf >/dev/null; then
-        sudo dnf install -y restic
-    elif command -v apt-get >/dev/null; then
-        sudo apt-get update -qq && sudo apt-get install -y restic
-    else
-        echo "no recognised package manager and restic is missing" >&2
-        exit 1
-    fi
-fi
+command -v restic >/dev/null || {
+    echo "restic not found on PATH. Install it (dnf install restic / apt install restic) and re-run." >&2
+    exit 1
+}
 restic version
 """
 timeout = 180
@@ -57,7 +51,7 @@ timeout = 180
 action = "shell"
 name = "configure-backup"
 run = """set -euo pipefail
-MINIO_ENV=$HOME/.local/share/services/minio/.env
+MINIO_ENV=${RYRA_DATA_DIR:-$HOME/.local/share/services}/minio/.env
 ROOT_USER=$(grep '^MINIO_ROOT_USER=' $MINIO_ENV | cut -d= -f2-)
 ROOT_PWD=$(grep '^MINIO_ROOT_PASSWORD=' $MINIO_ENV | cut -d= -f2-)
 PORT=$(grep '^SERVICE_PORT_HTTP=' $MINIO_ENV | cut -d= -f2-)
@@ -108,7 +102,7 @@ timeout = 240
 action = "shell"
 name = "plant-sentinels"
 run = """set -euo pipefail
-SVC_HOME=$HOME/.local/share/services/seafile
+SVC_HOME=${RYRA_DATA_DIR:-$HOME/.local/share/services}/seafile
 ROOT_PWD=$(grep '^MYSQL_ROOT_PASSWORD=' $SVC_HOME/.env | cut -d= -f2-)
 
 # File-storage sentinel.
@@ -154,7 +148,7 @@ timeout = 30
 action = "shell"
 name = "dump-file-exists"
 run = """set -euo pipefail
-DUMP=$HOME/.local/share/services/seafile/.backup/all-dbs.sql
+DUMP=${RYRA_DATA_DIR:-$HOME/.local/share/services}/seafile/.backup/all-dbs.sql
 test -s $DUMP || { echo "dump missing or empty at $DUMP"; exit 1; }
 grep -q 'CREATE DATABASE.*ccnet_db' $DUMP || { echo "ccnet_db missing from dump"; exit 1; }
 grep -q 'CREATE DATABASE.*seafile_db' $DUMP || { echo "seafile_db missing from dump"; exit 1; }
@@ -182,7 +176,7 @@ timeout = 60
 action = "shell"
 name = "mutate-sentinels"
 run = """set -euo pipefail
-SVC_HOME=$HOME/.local/share/services/seafile
+SVC_HOME=${RYRA_DATA_DIR:-$HOME/.local/share/services}/seafile
 ROOT_PWD=$(grep '^MYSQL_ROOT_PASSWORD=' $SVC_HOME/.env | cut -d= -f2-)
 echo "mutated-file-content" > $SVC_HOME/shared/backup-test-sentinel.txt
 podman exec -e MYSQL_PWD="$ROOT_PWD" seafile-mariadb mariadb -uroot seafile_db -e \\
@@ -211,7 +205,7 @@ timeout = 240
 action = "shell"
 name = "verify-restored"
 run = """set -euo pipefail
-SVC_HOME=$HOME/.local/share/services/seafile
+SVC_HOME=${RYRA_DATA_DIR:-$HOME/.local/share/services}/seafile
 ROOT_PWD=$(grep '^MYSQL_ROOT_PASSWORD=' $SVC_HOME/.env | cut -d= -f2-)
 
 FILE_VAL=$(cat $SVC_HOME/shared/backup-test-sentinel.txt)

@@ -38,7 +38,7 @@ timeout = 420
 [[tests.steps]]
 action = "shell"
 name = "data-dir-accessible"
-run = "test -d $HOME/.local/share/services/nextcloud/data"
+run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/nextcloud/data"
 
 # SMTP test - create a user with an email address, then fire `occ mail:test`
 # at them. Nextcloud routes that through the configured SMTP (inbucket)
@@ -193,4 +193,8 @@ action = "playwright"
 name = "playwright-sso-flow"
 spec = "nextcloud-auth.spec.ts"
 timeout = 180
-env = { AUTHELIA_USER = "testuser", AUTHELIA_PASSWORD = "testpassword123" }
+# Pin NEXTCLOUD_URL to the local test instance: the spec falls back to
+# process.env.NEXTCLOUD_URL, which on a real homelab host may point at a
+# production Nextcloud (e.g. bedrock's brain.bedrockchain.com). Setting it
+# here shadows any ambient value so the browser hits the install under test.
+env = { AUTHELIA_USER = "testuser", AUTHELIA_PASSWORD = "testpassword123", NEXTCLOUD_URL = "https://nextcloud.internal:8443" }

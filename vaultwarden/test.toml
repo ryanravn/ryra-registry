@@ -13,7 +13,7 @@ service = "caddy"
 [[tests.steps]]
 action = "shell"
 name = "inject-smtp-config"
-run = '''mkdir -p $HOME/.config/services && cat >> $HOME/.config/services/preferences.toml <<'TOML'
+run = '''mkdir -p ${RYRA_CONFIG_DIR:-$HOME/.config/services} && cat >> ${RYRA_CONFIG_DIR:-$HOME/.config/services}/preferences.toml <<'TOML'
 
 [smtp]
 host = "localhost"
@@ -43,15 +43,15 @@ service = "vaultwarden"
 [[tests.steps]]
 action = "shell"
 name = "data-dir-exists"
-run = "test -d $HOME/.local/share/services/vaultwarden"
+run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/vaultwarden"
 [[tests.steps]]
 action = "shell"
 name = "smtp-host-rendered"
-run = "grep -q 'SMTP_HOST=localhost' $HOME/.local/share/services/vaultwarden/.env"
+run = "grep -q 'SMTP_HOST=localhost' ${RYRA_DATA_DIR:-$HOME/.local/share/services}/vaultwarden/.env"
 [[tests.steps]]
 action = "shell"
 name = "smtp-from-rendered"
-run = "grep -q 'SMTP_FROM=noreply@example.com' $HOME/.local/share/services/vaultwarden/.env"
+run = "grep -q 'SMTP_FROM=noreply@example.com' ${RYRA_DATA_DIR:-$HOME/.local/share/services}/vaultwarden/.env"
 
 # SMTP delivery via vaultwarden's /admin/test/smtp endpoint. ADMIN_TOKEN
 # is set so /admin becomes reachable — otherwise vaultwarden hides it.

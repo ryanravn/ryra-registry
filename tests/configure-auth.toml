@@ -46,11 +46,11 @@ service = "vikunja"
 action = "shell"
 name = "auth-off-baseline"
 run = """set -e
-AUTH_YAML=~/.local/share/services/authelia/config/configuration.yml
-VIK_ENV=~/.local/share/services/vikunja/.env
+AUTH_YAML=${RYRA_DATA_DIR:-$HOME/.local/share/services}/authelia/config/configuration.yml
+VIK_ENV=${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/.env
 ! grep -q "client_name: 'vikunja'" "$AUTH_YAML"
 ! grep -q '^VIKUNJA_AUTH_OPENID_PROVIDERS' "$VIK_ENV"
-! grep -q '^auth =' ~/.local/share/services/vikunja/metadata.toml
+! grep -q '^auth =' ${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/metadata.toml
 """
 timeout = 30
 
@@ -65,12 +65,12 @@ action = "shell"
 name = "configure-auth-on"
 run = """set -e
 ryra configure vikunja --auth -y
-AUTH_YAML=~/.local/share/services/authelia/config/configuration.yml
-VIK_ENV=~/.local/share/services/vikunja/.env
+AUTH_YAML=${RYRA_DATA_DIR:-$HOME/.local/share/services}/authelia/config/configuration.yml
+VIK_ENV=${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/.env
 grep -q "client_name: 'vikunja'" "$AUTH_YAML"
 grep -q '^VIKUNJA_AUTH_OPENID_PROVIDERS' "$VIK_ENV" \
     || grep -q '^VIKUNJA_AUTH_OPENID_ENABLED' "$VIK_ENV"
-grep -q '^auth = ' ~/.local/share/services/vikunja/metadata.toml
+grep -q '^auth = ' ${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/metadata.toml
 """
 timeout = 180
 
@@ -89,11 +89,11 @@ action = "shell"
 name = "configure-auth-off"
 run = """set -e
 ryra configure vikunja --no-auth -y
-AUTH_YAML=~/.local/share/services/authelia/config/configuration.yml
-VIK_ENV=~/.local/share/services/vikunja/.env
+AUTH_YAML=${RYRA_DATA_DIR:-$HOME/.local/share/services}/authelia/config/configuration.yml
+VIK_ENV=${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/.env
 ! grep -q "client_name: 'vikunja'" "$AUTH_YAML"
 ! grep -q '^VIKUNJA_AUTH_OPENID_PROVIDERS' "$VIK_ENV"
-! grep -q '^auth = ' ~/.local/share/services/vikunja/metadata.toml
+! grep -q '^auth = ' ${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/metadata.toml
 """
 timeout = 180
 

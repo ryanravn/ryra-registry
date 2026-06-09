@@ -11,22 +11,22 @@ service = "supabase"
 [[tests.steps]]
 action = "shell"
 name = "api-ready"
-run = ". $HOME/.local/share/services/supabase/.env && for i in $(seq 1 60); do curl -so /dev/null -w '%{http_code}' http://localhost:$SERVICE_PORT_HTTP/ | grep -q '[0-9]' && exit 0; sleep 2; done; exit 1"
+run = ". ${RYRA_DATA_DIR:-$HOME/.local/share/services}/supabase/.env && for i in $(seq 1 60); do curl -so /dev/null -w '%{http_code}' http://localhost:$SERVICE_PORT_HTTP/ | grep -q '[0-9]' && exit 0; sleep 2; done; exit 1"
 timeout = 150
 [[tests.steps]]
 action = "shell"
 name = "auth-health"
-run = ". $HOME/.local/share/services/supabase/.env && for i in $(seq 1 30); do curl -sf -H \"apikey: $ANON_KEY\" http://localhost:$SERVICE_PORT_HTTP/auth/v1/health | grep -q GoTrue && exit 0; sleep 2; done; exit 1"
+run = ". ${RYRA_DATA_DIR:-$HOME/.local/share/services}/supabase/.env && for i in $(seq 1 30); do curl -sf -H \"apikey: $ANON_KEY\" http://localhost:$SERVICE_PORT_HTTP/auth/v1/health | grep -q GoTrue && exit 0; sleep 2; done; exit 1"
 timeout = 90
 [[tests.steps]]
 action = "shell"
 name = "signup-works"
-run = ". $HOME/.local/share/services/supabase/.env && curl -sf -X POST -H \"apikey: $ANON_KEY\" -H \"Content-Type: application/json\" -d '{\"email\":\"e2e@example.com\",\"password\":\"testpassword123\"}' http://localhost:$SERVICE_PORT_HTTP/auth/v1/signup | grep access_token"
+run = ". ${RYRA_DATA_DIR:-$HOME/.local/share/services}/supabase/.env && curl -sf -X POST -H \"apikey: $ANON_KEY\" -H \"Content-Type: application/json\" -d '{\"email\":\"e2e@example.com\",\"password\":\"testpassword123\"}' http://localhost:$SERVICE_PORT_HTTP/auth/v1/signup | grep access_token"
 timeout = 30
 [[tests.steps]]
 action = "shell"
 name = "rest-responds"
-run = ". $HOME/.local/share/services/supabase/.env && curl -sf -H \"apikey: $ANON_KEY\" -H \"Authorization: Bearer $ANON_KEY\" http://localhost:$SERVICE_PORT_HTTP/rest/v1/"
+run = ". ${RYRA_DATA_DIR:-$HOME/.local/share/services}/supabase/.env && curl -sf -H \"apikey: $ANON_KEY\" -H \"Authorization: Bearer $ANON_KEY\" http://localhost:$SERVICE_PORT_HTTP/rest/v1/"
 timeout = 30
 
 # SMTP via GoTrue's recovery email endpoint. Heavy stack — requires ~4.5 GB
@@ -98,19 +98,13 @@ ram = 4608
 action = "shell"
 name = "ensure-restic"
 run = """set -euo pipefail
-if ! command -v restic >/dev/null; then
-    if command -v dnf >/dev/null; then
-        sudo dnf install -y restic
-    elif command -v apt-get >/dev/null; then
-        sudo apt-get update -qq && sudo apt-get install -y restic
-    else
-        echo "no recognised package manager and restic is missing" >&2
-        exit 1
-    fi
-fi
+command -v restic >/dev/null || {
+    echo "restic not found on PATH. Install it (dnf install restic / apt install restic) and re-run." >&2
+    exit 1
+}
 restic version
 """
-timeout = 180
+timeout = 30
 
 # 1. MinIO — backup target.
 [[tests.steps]]
@@ -134,7 +128,7 @@ timeout = 180
 action = "shell"
 name = "configure-backup"
 run = """set -euo pipefail
-MINIO_ENV=$HOME/.local/share/services/minio/.env
+MINIO_ENV=${RYRA_DATA_DIR:-$HOME/.local/share/services}/minio/.env
 ROOT_USER=$(grep '^MINIO_ROOT_USER=' $MINIO_ENV | cut -d= -f2-)
 ROOT_PWD=$(grep '^MINIO_ROOT_PASSWORD=' $MINIO_ENV | cut -d= -f2-)
 PORT=$(grep '^SERVICE_PORT_HTTP=' $MINIO_ENV | cut -d= -f2-)
@@ -180,7 +174,7 @@ podman exec supabase-db psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "
     CREATE TABLE ryra_backup_test (id int, payload text);
     INSERT INTO ryra_backup_test VALUES (42, 'original-row');
 "
-STORAGE=$HOME/.local/share/services/supabase/storage-data
+STORAGE=${RYRA_DATA_DIR:-$HOME/.local/share/services}/supabase/storage-data
 test -d $STORAGE
 echo "original-file" > $STORAGE/sentinel.txt
 """
@@ -211,13 +205,16 @@ echo "$OUTPUT" | grep -q 'service:supabase' || {
 """
 timeout = 60
 
-# 6b. Audit snapshot contents: must include only db-data +
-#     storage-data, nothing ephemeral.
+# 6b. Audit snapshot contents: the whole-folder model captures the
+#     curated data paths (db-data + storage-data) plus the config
+#     artifacts a restore needs to rebuild the install (.env,
+#     metadata.toml, service.manifest, configs/, quadlets). Assert
+#     both data dirs are present and nothing *else data-like* leaked.
 [[tests.steps]]
 action = "shell"
 name = "audit-snapshot-contents"
 run = """set -euo pipefail
-PREFS=$HOME/.config/services/preferences.toml
+PREFS=${RYRA_CONFIG_DIR:-$HOME/.config/services}/preferences.toml
 RESTIC_PASSWORD=$(awk -F'"' '/^password = /{print $2; exit}' $PREFS)
 ENDPOINT=$(awk -F'"' '/^endpoint = /{print $2}' $PREFS)
 BUCKET=$(awk -F'"' '/^bucket = /{print $2}' $PREFS)
@@ -230,15 +227,16 @@ SCHEME=${ENDPOINT%%://*}
 HOST=${ENDPOINT#*://}
 REPO=s3:${SCHEME}://${HOST}/${BUCKET}
 
+SVC_PREFIX=${RYRA_DATA_DIR:-$HOME/.local/share/services}/supabase/
 FILES=$(restic ls --repo $REPO --tag service:supabase latest 2>/dev/null \\
-    | grep '^/home/ryra/.local/share/services/supabase/' \\
-    | sed 's|/home/ryra/.local/share/services/supabase/||' \\
+    | grep "^$SVC_PREFIX" \\
+    | sed "s|$SVC_PREFIX||" \\
     | awk -F/ '{print $1}' \\
     | sort -u)
 echo "snapshot top-level entries:"
 echo "$FILES"
 
-UNEXPECTED=$(echo "$FILES" | grep -vE '^(db-data|storage-data)?$' || true)
+UNEXPECTED=$(echo "$FILES" | grep -vE '^(db-data|storage-data|configs|\\.env|metadata\\.toml|service\\.manifest|.*\\.(container|network))?$' || true)
 if [ -n "$UNEXPECTED" ]; then
     echo "ERROR: unexpected paths in the snapshot:"
     echo "$UNEXPECTED"
@@ -259,7 +257,7 @@ podman exec supabase-db psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "
     DELETE FROM ryra_backup_test;
     INSERT INTO ryra_backup_test VALUES (99, 'mutated-row');
 "
-STORAGE=$HOME/.local/share/services/supabase/storage-data
+STORAGE=${RYRA_DATA_DIR:-$HOME/.local/share/services}/supabase/storage-data
 echo "mutated-file" > $STORAGE/sentinel.txt
 """
 timeout = 60
@@ -302,7 +300,7 @@ timeout = 60
 action = "shell"
 name = "verify-storage-restored"
 run = """set -euo pipefail
-STORAGE=$HOME/.local/share/services/supabase/storage-data
+STORAGE=${RYRA_DATA_DIR:-$HOME/.local/share/services}/supabase/storage-data
 ACTUAL=$(cat $STORAGE/sentinel.txt)
 test "$ACTUAL" = "original-file" || {
     echo "expected 'original-file', got: $ACTUAL"

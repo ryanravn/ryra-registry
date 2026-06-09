@@ -13,7 +13,6 @@ Volume=%h/.local/share/services/vikunja/db:/db:Z,U
 Volume=%h/.local/share/services/vikunja/files:/app/vikunja/files:Z,U
 EnvironmentFile=%h/.local/share/services/vikunja/.env
 Pull=missing
-HealthCmd=curl -sf http://localhost:3456/api/v1/info || exit 1
 
 [Service]
 EnvironmentFile=%h/.local/share/services/vikunja/.env

@@ -34,6 +34,11 @@ timeout = 900
 [[steps]]
 action = "wait"
 service = "nextcloud"
+# `ryra add nextcloud --auth` can return before the first-boot occ install +
+# DB migrations finish (the Caddy reload that gates `add` is faster than the
+# install), so the health endpoint may still be coming up. Cold boot runs
+# ~50s; the default 30s wait is too tight and flakes.
+timeout = 180
 
 # Install immich with OIDC
 [[steps]]
@@ -46,6 +51,8 @@ timeout = 900
 [[steps]]
 action = "wait"
 service = "immich"
+# Same guard as nextcloud above — heavy first boot in a multi-service test.
+timeout = 180
 
 # Verify nextcloud responds
 [[steps]]
@@ -81,9 +88,9 @@ timeout = 360
 action = "shell"
 name = "immich-oauth-configured"
 run = """
-PORT=$(grep SERVICE_PORT_HTTP $HOME/.local/share/services/immich/.env | cut -d= -f2)
-EMAIL=$(grep INIT_IMMICH_ADMIN_EMAIL $HOME/.local/share/services/immich/.env | cut -d= -f2)
-PASS=$(grep INIT_IMMICH_ADMIN_PASSWORD $HOME/.local/share/services/immich/.env | cut -d= -f2)
+PORT=$(grep SERVICE_PORT_HTTP ${RYRA_DATA_DIR:-$HOME/.local/share/services}/immich/.env | cut -d= -f2)
+EMAIL=$(grep INIT_IMMICH_ADMIN_EMAIL ${RYRA_DATA_DIR:-$HOME/.local/share/services}/immich/.env | cut -d= -f2)
+PASS=$(grep INIT_IMMICH_ADMIN_PASSWORD ${RYRA_DATA_DIR:-$HOME/.local/share/services}/immich/.env | cut -d= -f2)
 python3 -c "
 import json, urllib.request
 url = 'http://127.0.0.1:' + '$PORT'

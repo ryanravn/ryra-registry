@@ -19,7 +19,7 @@ timeout = 360
 [[tests.steps]]
 action = "shell"
 name = "data-dir-created"
-run = "test -d $HOME/.local/share/services/immich"
+run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/immich"
 
 # Full SSO flow via caddy + authelia. Heavy test — immich build takes a
 # while so give it 900s.
@@ -68,7 +68,7 @@ timeout = 120
 action = "shell"
 name = "create-admin"
 run = """
-PORT=$(grep SERVICE_PORT_HTTP $HOME/.local/share/services/immich/.env | cut -d= -f2)
+PORT=$(grep SERVICE_PORT_HTTP ${RYRA_DATA_DIR:-$HOME/.local/share/services}/immich/.env | cut -d= -f2)
 curl -sf -X POST "http://127.0.0.1:$PORT/api/auth/admin-sign-up" \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"testpassword123","name":"Admin"}' \

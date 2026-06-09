@@ -1,0 +1,3 @@
+# Playwright run artifacts — regenerated on every browser-test run.
+tests/browser/test-results/
+tests/browser/playwright-report/
