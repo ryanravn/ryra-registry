@@ -1,0 +1,140 @@
+# Disaster-recovery test: prove `ryra backup restore` (no args) rebuilds
+# a wiped machine from the repo. Installs MinIO + vikunja(--backup),
+# plants a sentinel, runs a FULL `ryra backup run` (whole-folder
+# snapshot), then *destroys* the vikunja install entirely (data, config,
+# quadlets, metadata) — simulating a fresh server that still has only
+# its preferences.toml — and runs the no-arg restore. The service must
+# come back from nothing: folder relaid, quadlet relinked, unit started,
+# sentinel intact.
+[test]
+name = "dr-restore-all"
+ram = 2048
+
+[[steps]]
+action = "shell"
+name = "ensure-restic"
+run = """set -euo pipefail
+if ! command -v restic >/dev/null; then
+    if command -v apt-get >/dev/null; then sudo apt-get update -qq && sudo apt-get install -y restic
+    elif command -v dnf >/dev/null; then sudo dnf install -y restic
+    else echo "no package manager and restic missing" >&2; exit 1; fi
+fi
+restic version
+"""
+timeout = 180
+
+[[steps]]
+action = "add"
+service = "minio"
+timeout = 300
+[[steps]]
+action = "wait"
+service = "minio"
+timeout = 180
+[[steps]]
+action = "http"
+name = "minio-health"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP/minio/health/live"
+service = "minio"
+poll = { interval = 2, attempts = 60 }
+timeout = 180
+
+# Configure the repo. preferences.toml now holds the repo creds — the
+# one artifact a "new machine" keeps.
+[[steps]]
+action = "shell"
+name = "configure-backup"
+run = """set -euo pipefail
+MINIO_ENV=$HOME/.local/share/services/minio/.env
+ROOT_USER=$(grep '^MINIO_ROOT_USER=' $MINIO_ENV | cut -d= -f2-)
+ROOT_PWD=$(grep '^MINIO_ROOT_PASSWORD=' $MINIO_ENV | cut -d= -f2-)
+PORT=$(grep '^SERVICE_PORT_HTTP=' $MINIO_ENV | cut -d= -f2-)
+ryra backup configure \\
+    --backend=s3 --endpoint=http://127.0.0.1:$PORT --bucket=ryra-backups \\
+    --access-key-id=$ROOT_USER --secret-access-key=$ROOT_PWD \\
+    --password=test-encryption-key-abcdef0123456789 --yes
+"""
+timeout = 120
+
+[[steps]]
+action = "add"
+service = "vikunja"
+args = "--backup"
+timeout = 300
+[[steps]]
+action = "wait"
+service = "vikunja"
+timeout = 180
+
+[[steps]]
+action = "shell"
+name = "plant-sentinel"
+run = """set -euo pipefail
+FILES=$HOME/.local/share/services/vikunja/files
+test -d $FILES
+echo "original-content" > $FILES/sentinel.txt
+"""
+timeout = 30
+
+# Full backup run (no service arg) — whole-folder snapshot of vikunja.
+[[steps]]
+action = "shell"
+name = "backup-run-all"
+run = """set -euo pipefail
+ryra backup run
+ryra backup list vikunja | grep -q 'service:vikunja'
+"""
+timeout = 300
+
+# DESTROY the vikunja install — simulate a bare machine. Keep
+# preferences.toml (repo creds) and minio (the local repo backend).
+[[steps]]
+action = "shell"
+name = "wipe-install"
+run = """set -euo pipefail
+systemctl --user stop vikunja.service || true
+sleep 2
+rm -rf $HOME/.local/share/services/vikunja
+rm -f $HOME/.config/containers/systemd/vikunja.container \\
+      $HOME/.config/containers/systemd/vikunja.network
+systemctl --user daemon-reload
+# prove it's gone
+test ! -e $HOME/.local/share/services/vikunja
+echo "vikunja install wiped"
+"""
+timeout = 60
+
+# The headline: one command rebuilds everything from the repo.
+[[steps]]
+action = "shell"
+name = "dr-restore"
+run = "ryra backup restore"
+timeout = 300
+
+[[steps]]
+action = "wait"
+service = "vikunja"
+timeout = 180
+
+# Verify: folder relaid, metadata + quadlet back, unit active, sentinel
+# survived, and HTTP responds.
+[[steps]]
+action = "shell"
+name = "verify-recovered"
+run = """set -euo pipefail
+test -f $HOME/.local/share/services/vikunja/metadata.toml
+test -L $HOME/.config/containers/systemd/vikunja.container
+systemctl --user is-active vikunja.service
+ACTUAL=$(cat $HOME/.local/share/services/vikunja/files/sentinel.txt)
+test "$ACTUAL" = "original-content" || { echo "sentinel = '$ACTUAL'"; exit 1; }
+echo "DR recovery verified"
+"""
+timeout = 60
+
+[[steps]]
+action = "http"
+name = "vikunja-http"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP/api/v1/info"
+service = "vikunja"
+poll = { interval = 2, attempts = 30 }
+timeout = 120
