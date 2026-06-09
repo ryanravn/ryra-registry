@@ -1,21 +1,18 @@
-# A "native" service: ryra compiles the source in this folder and runs the
-# resulting binary directly under systemd --user (no container image). The
-# service still gets the full ryra contract via env: SERVICE_PORT_HTTP for the
-# port, SERVICE_HOME for its data dir, and (later) auth/SMTP/db mappings.
-#
-# NOTE: `runtime = "native"` + `[build]` are not implemented in core yet — this
-# file defines the contract we're building toward.
+# A "native" service: ryra runs the `run` command directly under systemd --user
+# (no container image), in this folder. The service still gets the full ryra
+# contract via env: SERVICE_PORT_HTTP for the port, SERVICE_HOME for its data
+# dir, and (later) auth/SMTP/db mappings.
 
 [service]
 name = "native-hello"
 description = "Minimal std-only HTTP server: says hello, logs visitors + headers. Demonstrates native (non-podman) services."
 runtime = "native"
-
-# Build pipeline: run `command` in this folder, install `bin` into the service
-# home as the ExecStart target.
-[build]
-command = "cargo build --release"
-bin = "target/release/native-hello"
+# `build` (optional) runs in this folder, then ryra runs `run` directly under
+# systemd --user (in this folder) with SERVICE_PORT_HTTP + SERVICE_HOME injected.
+# An interpreted service would instead be e.g. run = "bun --watch run src/index.ts"
+# with no build step.
+build = "cargo build --release"
+run = "target/release/native-hello"
 
 # Same port model as container services: ryra allocates a host port and exposes
 # it to the process as SERVICE_PORT_HTTP.
@@ -25,6 +22,6 @@ container_port = 3000
 
 # Opt into ryra backups. No [backup] section, so the whole service folder is
 # snapshotted (config + the data/ state). Proves the whole-folder backup model
-# is runtime-agnostic — a native service backs up and restores like any other.
+# is runtime-agnostic: a native service backs up and restores like any other.
 [integrations]
 backup = true

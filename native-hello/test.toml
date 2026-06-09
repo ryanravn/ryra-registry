@@ -1,4 +1,4 @@
-# native-hello tests — exercise ryra's native (non-podman) runtime end to end:
+# native-hello tests: exercise ryra's native (non-podman) runtime end to end:
 # compile the source, run the binary under systemd --user, serve HTTP, and log
 # visits to the service data dir. This is the only `runtime = "native"` service
 # and exists purely to test that path.
@@ -38,5 +38,52 @@ grep -q 'X-Probe: ryra-test' "$SVC/data/visits.log"
 """
 [[tests.steps]]
 action = "shell"
-name = "binary-installed"
-run = "test -x ${RYRA_DATA_DIR:-$HOME/.local/share/services}/native-hello/bin/native-hello"
+name = "runs-as-unit"
+run = "systemctl --user is-active native-hello | grep -q active"
+
+# Inner-loop test: editing the source and running `ryra upgrade` rebuilds from
+# source and reloads the live service. Runs in one step under a trap that always
+# restores the source, so a failed assertion can't leave the registry dirty.
+[[tests]]
+name = "upgrade"
+[[tests.steps]]
+action = "add"
+service = "native-hello"
+timeout = 120
+[[tests.steps]]
+action = "wait"
+service = "native-hello"
+[[tests.steps]]
+action = "shell"
+name = "edit-upgrade-reload"
+run = """set -e
+SRC="$RYRA_REGISTRY_DIR/native-hello/src/main.rs"
+test -f "$SRC"
+cp "$SRC" /tmp/native-hello-main.bak
+# Restore the source no matter how this step exits (pass or fail).
+trap 'cp /tmp/native-hello-main.bak "$SRC"' EXIT
+
+. ${RYRA_DATA_DIR:-$HOME/.local/share/services}/native-hello/.env
+URL="http://127.0.0.1:$SERVICE_PORT_HTTP/"
+
+# Baseline: stock response.
+curl -s "$URL" | grep -q 'hello world'
+
+# Edit the source and upgrade; the live service must now serve the edit.
+sed -i 's/hello world/hello UPGRADED/' "$SRC"
+ryra upgrade native-hello -y
+for _ in $(seq 1 15); do
+  curl -s "$URL" 2>/dev/null | grep -q 'hello UPGRADED' && break
+  sleep 1
+done
+curl -s "$URL" | grep -q 'hello UPGRADED'
+
+# A second upgrade (source unchanged) is a cheap rebuild + restart; still serves.
+ryra upgrade native-hello -y
+for _ in $(seq 1 15); do
+  curl -s "$URL" 2>/dev/null | grep -q 'hello UPGRADED' && break
+  sleep 1
+done
+curl -s "$URL" | grep -q 'hello UPGRADED'
+"""
+timeout = 180
