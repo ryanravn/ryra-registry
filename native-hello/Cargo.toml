@@ -1,0 +1,11 @@
+[package]
+name = "native-hello"
+version = "0.1.0"
+edition = "2021"
+
+# Deliberately zero dependencies: a std-only HTTP server keeps the build fast
+# and proves ryra's native compilation pipeline without pulling a framework.
+
+[[bin]]
+name = "native-hello"
+path = "src/main.rs"

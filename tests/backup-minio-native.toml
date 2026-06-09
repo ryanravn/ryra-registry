@@ -1,0 +1,142 @@
+# Backup/restore round-trip for a `runtime = "native"` service against a local
+# MinIO S3 backend. Mirrors backup-minio.toml (vikunja) but for native-hello,
+# proving the whole-folder backup model is runtime-agnostic: a native service
+# backs up its config + data and restores cleanly, no podman involved.
+#
+# native-hello's data dir is host-owned (the process runs as the user), so the
+# sentinel is a plain file write — no `podman unshare` dance needed.
+[test]
+name = "backup-minio-native-lifecycle"
+ram = 1024
+
+[[steps]]
+action = "shell"
+name = "ensure-restic"
+run = """set -euo pipefail
+command -v restic >/dev/null || {
+    echo "restic not found on PATH. Install it (dnf install restic / apt install restic) and re-run." >&2
+    exit 1
+}
+restic version
+"""
+timeout = 30
+
+# 1. MinIO — the S3 backend.
+[[steps]]
+action = "add"
+service = "minio"
+timeout = 300
+[[steps]]
+action = "wait"
+service = "minio"
+timeout = 180
+[[steps]]
+action = "http"
+name = "minio-health"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP/minio/health/live"
+service = "minio"
+poll = { interval = 2, attempts = 60 }
+timeout = 180
+
+# 2. Point `ryra backup` at MinIO.
+[[steps]]
+action = "shell"
+name = "configure-backup"
+run = """set -euo pipefail
+MINIO_ENV=${RYRA_DATA_DIR:-$HOME/.local/share/services}/minio/.env
+ROOT_USER=$(grep '^MINIO_ROOT_USER=' $MINIO_ENV | cut -d= -f2-)
+ROOT_PWD=$(grep '^MINIO_ROOT_PASSWORD=' $MINIO_ENV | cut -d= -f2-)
+PORT=$(grep '^SERVICE_PORT_HTTP=' $MINIO_ENV | cut -d= -f2-)
+ryra backup configure \\
+    --backend=s3 --endpoint=http://127.0.0.1:$PORT --bucket=ryra-backups \\
+    --access-key-id=$ROOT_USER --secret-access-key=$ROOT_PWD \\
+    --password=test-encryption-key-abcdef0123456789 --yes
+"""
+timeout = 120
+
+# 3. Install native-hello (compiles the binary) with --backup.
+[[steps]]
+action = "add"
+service = "native-hello"
+args = "--backup"
+timeout = 120
+[[steps]]
+action = "wait"
+service = "native-hello"
+timeout = 60
+
+# 4. Plant a sentinel in the native service's data dir (host-owned).
+[[steps]]
+action = "shell"
+name = "plant-sentinel"
+run = """set -euo pipefail
+DATA=${RYRA_DATA_DIR:-$HOME/.local/share/services}/native-hello/data
+test -d "$DATA"
+echo original-content > "$DATA/sentinel.txt"
+"""
+timeout = 30
+
+# 5. Back up. No hooks — the whole folder is snapshotted.
+[[steps]]
+action = "shell"
+name = "backup-run"
+run = "ryra backup run native-hello"
+timeout = 300
+[[steps]]
+action = "wait"
+service = "native-hello"
+timeout = 60
+
+# 6. Snapshot landed.
+[[steps]]
+action = "shell"
+name = "list-shows-snapshot"
+run = """set -euo pipefail
+OUTPUT=$(ryra backup list native-hello 2>&1)
+echo "$OUTPUT"
+echo "$OUTPUT" | grep -q 'service:native-hello' || {
+    echo "expected a snapshot tagged service:native-hello in: $OUTPUT"
+    exit 1
+}
+"""
+timeout = 60
+
+# 7. Mutate the sentinel.
+[[steps]]
+action = "shell"
+name = "mutate-sentinel"
+run = """set -euo pipefail
+DATA=${RYRA_DATA_DIR:-$HOME/.local/share/services}/native-hello/data
+echo mutated-content > "$DATA/sentinel.txt"
+test "$(cat "$DATA/sentinel.txt")" = "mutated-content"
+"""
+timeout = 30
+
+# 8. Restore from the latest snapshot.
+[[steps]]
+action = "shell"
+name = "backup-restore"
+run = "ryra backup restore native-hello"
+timeout = 300
+[[steps]]
+action = "wait"
+service = "native-hello"
+timeout = 60
+
+# 9. Sentinel restored, and the service still serves.
+[[steps]]
+action = "shell"
+name = "verify-restored"
+run = """set -euo pipefail
+DATA=${RYRA_DATA_DIR:-$HOME/.local/share/services}/native-hello/data
+ACTUAL=$(cat "$DATA/sentinel.txt")
+test "$ACTUAL" = "original-content" || { echo "expected 'original-content', got '$ACTUAL'"; exit 1; }
+"""
+timeout = 30
+[[steps]]
+action = "http"
+name = "still-serving"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP/"
+service = "native-hello"
+poll = { interval = 1, attempts = 15 }
+timeout = 30
