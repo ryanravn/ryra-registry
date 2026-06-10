@@ -1,0 +1,22 @@
+[Unit]
+Description=Grafana
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Container]
+ContainerName=grafana
+Image=docker.io/grafana/grafana:13.0.2
+PublishPort=${SERVICE_PORT_HTTP}:3000
+Volume=${SERVICE_HOME}/data:/var/lib/grafana:Z,U
+Pull=missing
+EnvironmentFile=%h/.local/share/services/grafana/.env
+HealthCmd=curl -sf http://localhost:3000/api/health || exit 1
+
+[Service]
+EnvironmentFile=%h/.local/share/services/grafana/.env
+Restart=always
+RestartSec=5
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

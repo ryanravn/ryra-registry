@@ -1,0 +1,77 @@
+# grafana tests - install + SMTP delivery.
+
+[[tests]]
+name = "grafana"
+[[tests.steps]]
+action = "add"
+service = "grafana"
+[[tests.steps]]
+action = "wait"
+service = "grafana"
+[[tests.steps]]
+action = "http"
+name = "health-responds"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP/api/health"
+service = "grafana"
+poll = { interval = 2, attempts = 20 }
+timeout = 60
+[[tests.steps]]
+action = "http"
+name = "login-page-responds"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP/login"
+service = "grafana"
+[[tests.steps]]
+action = "shell"
+name = "data-dir-created"
+run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/grafana"
+[[tests.steps]]
+action = "shell"
+name = "admin-login-works"
+run = """. ${RYRA_DATA_DIR:-$HOME/.local/share/services}/grafana/.env
+curl -sf -u "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD" \
+  "http://127.0.0.1:$SERVICE_PORT_HTTP/api/org" | grep -q '"id"'"""
+
+# Mail delivery: grafana's forgot-password flow sends a reset link to the
+# admin user's email (admin@example.com -> inbucket mailbox "admin").
+[[tests]]
+name = "smtp"
+[[tests.steps]]
+action = "add"
+service = "grafana"
+args = "--smtp=inbucket"
+timeout = 300
+[[tests.steps]]
+action = "wait"
+service = "grafana"
+[[tests.steps]]
+action = "http"
+name = "health-responds"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP/api/health"
+service = "grafana"
+poll = { interval = 2, attempts = 20 }
+timeout = 60
+[[tests.steps]]
+action = "shell"
+name = "smtp-env-rendered"
+run = "grep -q 'GF_SMTP_ENABLED=true' ${RYRA_DATA_DIR:-$HOME/.local/share/services}/grafana/.env"
+[[tests.steps]]
+action = "shell"
+name = "trigger-reset-email"
+run = """. ${RYRA_DATA_DIR:-$HOME/.local/share/services}/grafana/.env
+for i in $(seq 1 10); do
+  code=$(curl -s -o /tmp/grafana-reset-resp -w '%{http_code}' -X POST \
+    "http://127.0.0.1:$SERVICE_PORT_HTTP/api/user/password/send-reset-email" \
+    -H 'Content-Type: application/json' \
+    -d '{"userOrEmail":"admin@example.com"}')
+  [ "$code" = 200 ] && exit 0
+  sleep 3
+done
+echo "last response ($code): $(cat /tmp/grafana-reset-resp)"
+exit 1"""
+timeout = 60
+[[tests.steps]]
+action = "mail"
+name = "mail-delivered-to-inbucket"
+mailbox = "admin"
+contains = "Grafana"
+timeout = 90
