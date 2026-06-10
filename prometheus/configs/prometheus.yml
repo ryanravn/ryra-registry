@@ -1,0 +1,15 @@
+# Managed by ryra. Scrape targets are discovered from
+# /etc/prometheus/targets/*.json (bind-mounted from the service's
+# targets/ dir) - edit or drop files there, no reload needed.
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: services
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/*.json

@@ -1,0 +1,55 @@
+# Retroactive metrics wiring: grafana installed BEFORE prometheus. The
+# store's add must wire the existing dashboard: scrape target, datasource
+# provisioning, network join, and a restart so grafana loads it.
+[test]
+name = "metrics-retro"
+ram = 1536
+
+[[steps]]
+action = "add"
+service = "grafana"
+timeout = 300
+[[steps]]
+action = "wait"
+service = "grafana"
+
+[[steps]]
+action = "add"
+service = "prometheus"
+timeout = 300
+[[steps]]
+action = "wait"
+service = "prometheus"
+[[steps]]
+action = "wait"
+service = "grafana"
+
+[[steps]]
+action = "shell"
+name = "scrape-target-written-retroactively"
+run = "test -f ${RYRA_DATA_DIR:-$HOME/.local/share/services}/prometheus/targets/grafana.json"
+
+[[steps]]
+action = "shell"
+name = "prometheus-scrapes-grafana"
+run = """. ${RYRA_DATA_DIR:-$HOME/.local/share/services}/prometheus/.env
+for i in $(seq 1 30); do
+  curl -s "http://127.0.0.1:$SERVICE_PORT_HTTP/api/v1/targets" \
+    | grep -q '"service":"grafana".*"health":"up"\\|"health":"up".*"service":"grafana"' && exit 0
+  sleep 3
+done
+echo "grafana target never up: $(curl -s http://127.0.0.1:$SERVICE_PORT_HTTP/api/v1/targets)"
+exit 1"""
+timeout = 120
+
+[[steps]]
+action = "shell"
+name = "grafana-datasource-provisioned"
+run = """. ${RYRA_DATA_DIR:-$HOME/.local/share/services}/grafana/.env
+for i in $(seq 1 10); do
+  curl -sf -u "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD" \
+    "http://127.0.0.1:$SERVICE_PORT_HTTP/api/datasources" | grep -q '"type":"prometheus"' && exit 0
+  sleep 3
+done
+exit 1"""
+timeout = 60

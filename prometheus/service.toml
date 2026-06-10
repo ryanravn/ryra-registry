@@ -1,0 +1,25 @@
+[service]
+name = "prometheus"
+description = "Prometheus - metrics collection and time-series database"
+url = "https://prometheus.io/docs/"
+architecture = ["amd64", "arm64"]
+
+[requirements.ram]
+min = 256
+recommended = 512
+
+[[ports]]
+name = "http"
+container_port = 9090
+
+[capabilities]
+provides = ["metrics-store"]
+
+[integrations]
+auth = []
+smtp = false
+# TSDB under data/, scrape targets under targets/. Stop, snapshot, start.
+backup = true
+
+[backup]
+paths = ["data", "targets"]

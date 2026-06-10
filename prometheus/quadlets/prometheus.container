@@ -1,0 +1,27 @@
+[Unit]
+Description=Prometheus
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Container]
+ContainerName=prometheus
+Image=docker.io/prom/prometheus:v3.12.0
+Network=prometheus.network
+PublishPort=${SERVICE_PORT_HTTP}:9090
+Volume=${SERVICE_HOME}/data:/prometheus:Z,U
+Volume=${SERVICE_HOME}/configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro,Z
+# Scrape targets via file_sd: dropping/removing <svc>.json files here takes
+# effect without a reload or restart.
+Volume=${SERVICE_HOME}/targets:/etc/prometheus/targets:ro,Z
+Pull=missing
+EnvironmentFile=%h/.local/share/services/prometheus/.env
+HealthCmd=wget -q --spider http://localhost:9090/-/healthy || exit 1
+
+[Service]
+EnvironmentFile=%h/.local/share/services/prometheus/.env
+Restart=always
+RestartSec=5
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

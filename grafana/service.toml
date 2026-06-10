@@ -37,6 +37,13 @@ prompt = "Admin password"
 name = "GF_SECURITY_ADMIN_EMAIL"
 value = "{{admin.email | default('admin@example.com')}}"
 
+[capabilities]
+provides = ["metrics-dashboard"]
+
+# Grafana serves its own prometheus-style metrics on the web port.
+[metrics]
+port = "http"
+
 [integrations]
 auth = []
 smtp = true

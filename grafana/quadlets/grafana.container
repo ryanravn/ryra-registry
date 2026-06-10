@@ -8,6 +8,9 @@ ContainerName=grafana
 Image=docker.io/grafana/grafana:13.0.2
 PublishPort=${SERVICE_PORT_HTTP}:3000
 Volume=${SERVICE_HOME}/data:/var/lib/grafana:Z,U
+# Datasources provisioned by ryra (e.g. an installed metrics store) land
+# here; grafana reads the dir at boot. Empty on standalone installs.
+Volume=${SERVICE_HOME}/provisioning-datasources:/etc/grafana/provisioning/datasources:ro,Z
 Pull=missing
 EnvironmentFile=%h/.local/share/services/grafana/.env
 HealthCmd=curl -sf http://localhost:3000/api/health || exit 1
