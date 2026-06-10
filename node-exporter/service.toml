@@ -1,0 +1,31 @@
+[service]
+name = "node-exporter"
+description = "Node Exporter - host-level metrics (CPU, RAM, disk, network) for Prometheus"
+url = "https://prometheus.io/docs/guides/node-exporter/"
+architecture = ["amd64", "arm64"]
+post_install = """
+For full host graphs in grafana, import the community "Node Exporter
+Full" dashboard: Dashboards -> New -> Import -> enter ID 1860 -> pick
+your prometheus datasource. (Requires prometheus + grafana, which wire
+up automatically when installed.)"""
+
+[requirements.ram]
+min = 64
+recommended = 128
+
+[[ports]]
+name = "http"
+container_port = 9100
+
+# Runs on the host network (real interfaces, real routing table) — the
+# scrape target goes via host.containers.internal at the resolved host
+# port instead of container DNS.
+[metrics]
+port = "http"
+host_network = true
+
+[integrations]
+auth = []
+smtp = false
+# Stateless exporter — nothing to back up.
+backup = false

@@ -1,0 +1,56 @@
+# node-exporter tests - install + scrape-through-host-gateway.
+
+[[tests]]
+name = "node-exporter"
+[[tests.steps]]
+action = "add"
+service = "node-exporter"
+[[tests.steps]]
+action = "wait"
+service = "node-exporter"
+[[tests.steps]]
+action = "http"
+name = "metrics-responds"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP/metrics"
+service = "node-exporter"
+poll = { interval = 2, attempts = 15 }
+timeout = 60
+[[tests.steps]]
+action = "shell"
+name = "host-metrics-present"
+run = """. ${RYRA_DATA_DIR:-$HOME/.local/share/services}/node-exporter/.env
+curl -s "http://127.0.0.1:$SERVICE_PORT_HTTP/metrics" | grep -q '^node_cpu_seconds_total'"""
+
+# Scrape via prometheus: host-network consumer targets the podman host
+# gateway at the resolved host port instead of container DNS.
+[[tests]]
+name = "prometheus"
+[[tests.steps]]
+action = "add"
+service = "prometheus"
+timeout = 300
+[[tests.steps]]
+action = "wait"
+service = "prometheus"
+[[tests.steps]]
+action = "add"
+service = "node-exporter"
+[[tests.steps]]
+action = "wait"
+service = "node-exporter"
+[[tests.steps]]
+action = "shell"
+name = "target-uses-host-gateway"
+run = "grep -q 'host.containers.internal' ${RYRA_DATA_DIR:-$HOME/.local/share/services}/prometheus/targets/node-exporter.json"
+[[tests.steps]]
+action = "shell"
+name = "prometheus-scrapes-node-exporter"
+run = """. ${RYRA_DATA_DIR:-$HOME/.local/share/services}/prometheus/.env
+for i in $(seq 1 30); do
+  curl -s "http://127.0.0.1:$SERVICE_PORT_HTTP/api/v1/query" --data-urlencode 'query=up{service="node-exporter"}' \
+    | grep -q '"1"' && exit 0
+  sleep 3
+done
+echo "node-exporter target never up: $(curl -s http://127.0.0.1:$SERVICE_PORT_HTTP/api/v1/targets)"
+exit 1"""
+timeout = 120

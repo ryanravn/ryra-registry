@@ -1,0 +1,29 @@
+[Unit]
+Description=Node Exporter
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Container]
+ContainerName=node-exporter
+Image=quay.io/prometheus/node-exporter:v1.11.1
+# Host network: network metrics must see the real interfaces, and the
+# listen port is the host port directly (no PublishPort with host nets).
+# Host pid + / mounted read-only give the exporter the real process and
+# filesystem view; rootless covers CPU/RAM/disk/network (a few privileged
+# collectors like some hwmon sensors stay empty).
+Network=host
+PodmanArgs=--pid=host
+Volume=/:/host:ro,rslave
+Exec=--path.rootfs=/host --web.listen-address=:${SERVICE_PORT_HTTP}
+Pull=missing
+EnvironmentFile=%h/.local/share/services/node-exporter/.env
+HealthCmd=wget -q --spider http://localhost:${SERVICE_PORT_HTTP}/metrics || exit 1
+
+[Service]
+EnvironmentFile=%h/.local/share/services/node-exporter/.env
+Restart=always
+RestartSec=5
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target
