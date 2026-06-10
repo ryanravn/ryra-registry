@@ -7,7 +7,7 @@ StartLimitBurst=3
 Image=docker.io/library/postgres:15-alpine
 ContainerName=ente-postgres
 Network=ente.network:alias=postgres
-Volume=%h/.local/share/services/ente/db-data:/var/lib/postgresql/data:Z,U
+Volume=${SERVICE_HOME}/db-data:/var/lib/postgresql/data:Z,U
 HealthCmd=pg_isready -q -d ${POSTGRES_DB} -U ${POSTGRES_USER}
 HealthStartPeriod=30s
 HealthInterval=10s

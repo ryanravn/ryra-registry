@@ -7,7 +7,7 @@ StartLimitBurst=3
 Image=docker.io/library/elasticsearch:9.3.3
 ContainerName=zammad-elasticsearch
 Network=zammad.network:alias=elasticsearch
-Volume=%h/.local/share/services/zammad/es-data:/usr/share/elasticsearch/data:Z,U
+Volume=${SERVICE_HOME}/es-data:/usr/share/elasticsearch/data:Z,U
 Environment=discovery.type=single-node
 Environment=xpack.security.enabled=false
 Environment=ES_JAVA_OPTS=-Xms512m -Xmx512m
@@ -19,6 +19,9 @@ HealthTimeout=5s
 Pull=missing
 
 [Service]
+# Service-level env only: ${SERVICE_HOME} in Volume= expands in the
+# generated ExecStart from here. The container env stays clean.
+EnvironmentFile=%h/.local/share/services/zammad/.env
 Restart=always
 RestartSec=5
 TimeoutStartSec=600

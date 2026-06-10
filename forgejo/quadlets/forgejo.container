@@ -11,7 +11,7 @@ AutoUpdate=registry
 ContainerName=forgejo
 Network=forgejo.network
 PublishPort=${SERVICE_PORT_HTTP}:3000
-Volume=%h/.local/share/services/forgejo/data:/data:Z,U
+Volume=${SERVICE_HOME}/data:/data:Z,U
 Pull=missing
 EnvironmentFile=%h/.local/share/services/forgejo/.env
 HealthCmd=curl -sf http://localhost:3000/api/v1/settings/api || exit 1
@@ -21,7 +21,7 @@ EnvironmentFile=%h/.local/share/services/forgejo/.env
 Restart=always
 RestartSec=5
 TimeoutStartSec=300
-ExecStartPost=/bin/bash %h/.local/share/services/forgejo/configs/scripts/register-oidc.sh
+ExecStartPost=/bin/bash ${SERVICE_HOME}/configs/scripts/register-oidc.sh
 
 [Install]
 WantedBy=default.target

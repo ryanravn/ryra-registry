@@ -9,14 +9,14 @@ After=supabase-network.service
 ContainerName=supabase-db
 Image=docker.io/supabase/postgres:15.8.1.085
 Network=supabase.network:alias=db
-Volume=%h/.local/share/services/supabase/configs/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
-Volume=%h/.local/share/services/supabase/configs/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:Z
-Volume=%h/.local/share/services/supabase/configs/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
-Volume=%h/.local/share/services/supabase/configs/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
-Volume=%h/.local/share/services/supabase/configs/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:Z
-Volume=%h/.local/share/services/supabase/configs/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:Z
-Volume=%h/.local/share/services/supabase/configs/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:Z
-Volume=%h/.local/share/services/supabase/db-data:/var/lib/postgresql/data:Z,U
+Volume=${SERVICE_HOME}/configs/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
+Volume=${SERVICE_HOME}/configs/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:Z
+Volume=${SERVICE_HOME}/configs/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
+Volume=${SERVICE_HOME}/configs/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
+Volume=${SERVICE_HOME}/configs/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:Z
+Volume=${SERVICE_HOME}/configs/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:Z
+Volume=${SERVICE_HOME}/configs/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:Z
+Volume=${SERVICE_HOME}/db-data:/var/lib/postgresql/data:Z,U
 Environment=POSTGRES_HOST=/var/run/postgresql
 Exec=postgres -c config_file=/etc/postgresql/postgresql.conf -c log_min_messages=fatal
 Pull=missing

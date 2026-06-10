@@ -10,7 +10,7 @@ Image=ghcr.io/zammad/zammad:7.0.1-0019
 ContainerName=zammad
 Network=zammad.network
 PublishPort=${SERVICE_PORT_HTTP}:8080
-Volume=%h/.local/share/services/zammad/storage:/opt/zammad/storage:z,U
+Volume=${SERVICE_HOME}/storage:/opt/zammad/storage:z,U
 Exec=zammad-nginx
 HealthCmd=curl -sf http://localhost:8080/ || exit 1
 HealthStartPeriod=60s
@@ -25,9 +25,9 @@ EnvironmentFile=%h/.local/share/services/zammad/.env
 Restart=always
 RestartSec=5
 TimeoutStartSec=600
-ExecStartPost=/bin/bash %h/.local/share/services/zammad/configs/scripts/run-autowizard.sh
-ExecStartPost=/bin/bash %h/.local/share/services/zammad/configs/scripts/configure-oidc.sh
-ExecStartPost=/bin/bash %h/.local/share/services/zammad/configs/scripts/configure-smtp.sh
+ExecStartPost=/bin/bash ${SERVICE_HOME}/configs/scripts/run-autowizard.sh
+ExecStartPost=/bin/bash ${SERVICE_HOME}/configs/scripts/configure-oidc.sh
+ExecStartPost=/bin/bash ${SERVICE_HOME}/configs/scripts/configure-smtp.sh
 
 [Install]
 WantedBy=default.target

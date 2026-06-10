@@ -10,7 +10,7 @@ Image=ghcr.io/immich-app/immich-server:v2.7.4
 ContainerName=immich-server
 Network=immich.network
 PublishPort=${SERVICE_PORT_HTTP}:2283
-Volume=%h/.local/share/services/immich/upload:/data:Z
+Volume=${SERVICE_HOME}/upload:/data:Z
 Pull=missing
 EnvironmentFile=%h/.local/share/services/immich/.env
 HealthCmd=curl -sf http://localhost:2283/api/server/ping || exit 1
@@ -20,8 +20,8 @@ EnvironmentFile=%h/.local/share/services/immich/.env
 Restart=always
 RestartSec=5
 TimeoutStartSec=600
-ExecStartPost=/bin/bash %h/.local/share/services/immich/configs/scripts/create-admin.sh
-ExecStartPost=/bin/bash %h/.local/share/services/immich/configs/scripts/configure-oidc.sh
+ExecStartPost=/bin/bash ${SERVICE_HOME}/configs/scripts/create-admin.sh
+ExecStartPost=/bin/bash ${SERVICE_HOME}/configs/scripts/configure-oidc.sh
 
 [Install]
 WantedBy=default.target

@@ -11,8 +11,8 @@ AutoUpdate=registry
 ContainerName=nextcloud
 Network=nextcloud.network
 PublishPort=${SERVICE_PORT_HTTP}:80
-Volume=%h/.local/share/services/nextcloud/app:/var/www/html:Z,U
-Volume=%h/.local/share/services/nextcloud/data:/var/www/html/data:Z
+Volume=${SERVICE_HOME}/app:/var/www/html:Z,U
+Volume=${SERVICE_HOME}/data:/var/www/html/data:Z
 Pull=missing
 EnvironmentFile=%h/.local/share/services/nextcloud/.env
 HealthCmd=curl -sf http://localhost/status.php || exit 1
@@ -25,9 +25,9 @@ EnvironmentFile=%h/.local/share/services/nextcloud/.env
 Restart=always
 RestartSec=5
 TimeoutStartSec=900
-ExecStartPost=/bin/bash %h/.local/share/services/nextcloud/configs/scripts/configure-background-jobs.sh
-ExecStartPost=/bin/bash %h/.local/share/services/nextcloud/configs/scripts/configure-smtp.sh
-ExecStartPost=/bin/bash %h/.local/share/services/nextcloud/configs/scripts/configure-oidc.sh
+ExecStartPost=/bin/bash ${SERVICE_HOME}/configs/scripts/configure-background-jobs.sh
+ExecStartPost=/bin/bash ${SERVICE_HOME}/configs/scripts/configure-smtp.sh
+ExecStartPost=/bin/bash ${SERVICE_HOME}/configs/scripts/configure-oidc.sh
 
 [Install]
 WantedBy=default.target

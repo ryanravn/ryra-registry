@@ -9,7 +9,7 @@ ContainerName=ente-minio
 Network=ente.network:alias=minio
 # Publish to loopback only; Tailscale serve fronts it on the tailnet (HTTPS).
 PublishPort=127.0.0.1:${SERVICE_PORT_MINIO}:3200
-Volume=%h/.local/share/services/ente/minio-data:/data:Z,U
+Volume=${SERVICE_HOME}/minio-data:/data:Z,U
 Exec=server /data --address :3200 --console-address :3201
 Pull=missing
 # Browser uploads/downloads are cross-origin (Photos app → S3) and arrive via a
@@ -28,7 +28,7 @@ EnvironmentFile=%h/.local/share/services/ente/.env
 Restart=always
 RestartSec=5
 TimeoutStartSec=300
-ExecStartPost=/bin/bash %h/.local/share/services/ente/configs/scripts/create-buckets.sh
+ExecStartPost=/bin/bash ${SERVICE_HOME}/configs/scripts/create-buckets.sh
 
 [Install]
 WantedBy=default.target

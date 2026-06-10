@@ -11,7 +11,7 @@ PublishPort=${SERVICE_PORT_HTTP}:9000
 PublishPort=${SERVICE_PORT_CONSOLE}:9001
 Pull=missing
 EnvironmentFile=%h/.local/share/services/minio/.env
-Volume=%h/.local/share/services/minio/data:/data:Z,U
+Volume=${SERVICE_HOME}/data:/data:Z,U
 Exec=server /data --console-address ":9001"
 HealthCmd=curl -sf http://localhost:9000/minio/health/live || exit 1
 

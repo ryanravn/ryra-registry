@@ -9,15 +9,15 @@ ContainerName=open-webui
 Image=ghcr.io/open-webui/open-webui:0.8.12
 Network=open-webui.network
 PublishPort=${SERVICE_PORT_HTTP}:8080
-Volume=%h/.local/share/services/open-webui/data:/app/backend/data:Z,U
+Volume=${SERVICE_HOME}/data:/app/backend/data:Z,U
 EnvironmentFile=%h/.local/share/services/open-webui/.env
 Pull=missing
 HealthCmd=curl -sf http://localhost:8080/ || exit 1
 
 [Service]
 EnvironmentFile=%h/.local/share/services/open-webui/.env
-ExecStartPre=/bin/bash %h/.local/share/services/open-webui/configs/scripts/merge-ca-bundle.sh
-ExecStartPost=/bin/bash -c "podman cp %h/.local/share/services/open-webui/ca-bundle.crt open-webui:/usr/local/lib/python3.11/site-packages/certifi/cacert.pem 2>/dev/null || true"
+ExecStartPre=/bin/bash ${SERVICE_HOME}/configs/scripts/merge-ca-bundle.sh
+ExecStartPost=/bin/bash -c "podman cp ${SERVICE_HOME}/ca-bundle.crt open-webui:/usr/local/lib/python3.11/site-packages/certifi/cacert.pem 2>/dev/null || true"
 Restart=always
 RestartSec=5
 TimeoutStartSec=300

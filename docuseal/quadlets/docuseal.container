@@ -12,7 +12,7 @@ PublishPort=${SERVICE_PORT_HTTP}:3000
 # DocuSeal stores SQLite db, uploaded PDFs, signed outputs, and a secret
 # encryption key under /data. Bind mount so the data survives container
 # replacement and is inspectable from the host.
-Volume=%h/.local/share/services/docuseal/data:/data:Z,U
+Volume=${SERVICE_HOME}/data:/data:Z,U
 EnvironmentFile=%h/.local/share/services/docuseal/.env
 # Probe 127.0.0.1, not localhost: the container's /etc/hosts maps localhost to
 # both 127.0.0.1 and ::1, wget tries ::1 first, and docuseal binds IPv4-only

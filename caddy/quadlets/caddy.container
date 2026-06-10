@@ -10,9 +10,9 @@ AutoUpdate=registry
 Network=caddy.network
 PublishPort=${SERVICE_PORT_HTTP}:${SERVICE_PORT_HTTP}
 PublishPort=${SERVICE_PORT_HTTPS}:${SERVICE_PORT_HTTPS}
-Volume=%h/.local/share/services/caddy/data:/data:Z,U
-Volume=%h/.local/share/services/caddy/config-state:/config:Z,U
-Volume=%h/.local/share/services/caddy/config:/etc/caddy:Z
+Volume=${SERVICE_HOME}/data:/data:Z,U
+Volume=${SERVICE_HOME}/config-state:/config:Z,U
+Volume=${SERVICE_HOME}/config:/etc/caddy:Z
 Pull=missing
 EnvironmentFile=%h/.local/share/services/caddy/.env
 HealthCmd=caddy version || exit 1
@@ -22,8 +22,8 @@ EnvironmentFile=%h/.local/share/services/caddy/.env
 Restart=always
 RestartSec=5
 TimeoutStartSec=300
-ExecStartPre=/bin/bash %h/.local/share/services/caddy/configs/scripts/seed-caddyfile.sh
-ExecStartPost=-/bin/bash %h/.local/share/services/caddy/configs/scripts/export-root-ca.sh
+ExecStartPre=/bin/bash ${SERVICE_HOME}/configs/scripts/seed-caddyfile.sh
+ExecStartPost=-/bin/bash ${SERVICE_HOME}/configs/scripts/export-root-ca.sh
 
 [Install]
 WantedBy=default.target

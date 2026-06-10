@@ -8,7 +8,7 @@ Image=docker.io/library/mariadb:10.11
 AutoUpdate=registry
 ContainerName=seafile-mariadb
 Network=seafile.network:alias=mariadb
-Volume=%h/.local/share/services/seafile/db-data:/var/lib/mysql:Z,U
+Volume=${SERVICE_HOME}/db-data:/var/lib/mysql:Z,U
 HealthCmd=healthcheck.sh --connect --innodb_initialized
 HealthStartPeriod=20s
 HealthInterval=30s
