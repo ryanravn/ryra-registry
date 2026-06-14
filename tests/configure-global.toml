@@ -1,0 +1,86 @@
+# End-to-end test for `ryra configure` with no service argument: edit global
+# preferences and propagate them into installed services.
+#
+# Vikunja is the ideal fixture because a single service exercises both halves
+# of the contract:
+#   - `[mappings.smtp]` (VIKUNJA_MAILER_*) -> a global SMTP change must reach
+#     the running service's .env;
+#   - `[[env_group]] todoist` with `kind = required` members -> values the user
+#     supplied (the Todoist client id/secret) must be preserved verbatim, never
+#     clobbered or "propagated".
+#
+# The flow: install vikunja wired to inbucket, enable the todoist group with
+# custom values, then change one global SMTP field and assert the propagation
+# touched exactly the right key and nothing else.
+
+[test]
+name = "configure-global"
+ram = 2048
+
+# 1. Install vikunja wired to inbucket. `--smtp=inbucket` auto-installs
+# inbucket and writes the global [smtp] block (from = noreply@example.com).
+[[steps]]
+action = "add"
+service = "vikunja"
+args = "--smtp=inbucket"
+timeout = 300
+
+[[steps]]
+action = "wait"
+service = "vikunja"
+timeout = 120
+
+# 2. Enable the todoist import group with user-supplied values. These stand in
+# for any "custom" per-service input that reconcile must leave alone.
+[[steps]]
+action = "shell"
+name = "enable-todoist-with-custom-values"
+run = """set -e
+ENV=${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/.env
+ryra configure vikunja --enable todoist \\
+    --set VIKUNJA_MIGRATION_TODOIST_CLIENTID=my-todoist-id \\
+    --set VIKUNJA_MIGRATION_TODOIST_CLIENTSECRET=my-todoist-secret -y
+# Baseline: inbucket's defaults are in place and the custom values landed.
+grep -q '^VIKUNJA_MAILER_FROMEMAIL=noreply@example.com$' "$ENV"
+grep -q '^VIKUNJA_MAILER_HOST=inbucket$' "$ENV"
+grep -q '^VIKUNJA_MIGRATION_TODOIST_CLIENTID=my-todoist-id$' "$ENV"
+"""
+timeout = 120
+
+# 3. The core case: change one global SMTP field headlessly and let it
+# propagate. Only the from-address key should move.
+[[steps]]
+action = "shell"
+name = "global-edit-propagates"
+run = """set -e
+ENV=${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/.env
+ryra configure --smtp-from changed@reconcile.test -y
+# Propagated:
+grep -q '^VIKUNJA_MAILER_FROMEMAIL=changed@reconcile.test$' "$ENV"
+# Unrelated global SMTP key untouched (only --smtp-from changed):
+grep -q '^VIKUNJA_MAILER_HOST=inbucket$' "$ENV"
+# User-supplied required-group values preserved, not reverted:
+grep -q '^VIKUNJA_MIGRATION_TODOIST_CLIENTID=my-todoist-id$' "$ENV"
+grep -q '^VIKUNJA_MIGRATION_TODOIST_CLIENTSECRET=my-todoist-secret$' "$ENV"
+"""
+timeout = 120
+
+# 4. Service comes back healthy after the reconcile restart.
+[[steps]]
+action = "wait"
+service = "vikunja"
+timeout = 120
+
+# 5. --dry-run is fully non-mutating: no env change, and the global config
+# itself is restored (the from-address stays at the value set in step 3).
+[[steps]]
+action = "shell"
+name = "dry-run-changes-nothing"
+run = """set -e
+ENV=${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja/.env
+ryra configure --smtp-from again@reconcile.test --dry-run | grep -q 'Dry run'
+grep -q '^VIKUNJA_MAILER_FROMEMAIL=changed@reconcile.test$' "$ENV"
+! grep -q 'again@reconcile.test' "$ENV"
+ryra configure | grep -q 'changed@reconcile.test'
+"""
+timeout = 60
