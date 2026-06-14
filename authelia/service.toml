@@ -61,13 +61,20 @@ prompt = "Admin email"
 name = "DOMAIN"
 value = "{{ service.domain | default('localhost') }}"
 
-# Full external URL with port — used by generate-config.sh as the
-# `authelia_url` in configuration.yml. Set to service.external_url so
-# whatever the user picked (--url, --tailscale, Caddy auto) flows through
-# verbatim. The script falls back to reconstructing if this is empty.
+# Full external URL with port. configuration.yml reads it via
+# `{{ env "AUTH_URL" }}` as the session `authelia_url`, so whatever the user
+# picked (--url, --tailscale, Caddy auto) flows through verbatim and a later
+# URL change takes effect on the next restart instead of being baked once.
 [[env]]
 name = "AUTH_URL"
 value = "{{ service.external_url | default('') }}"
+
+# Session cookie domain, derived from the auth host so the SSO cookie spans
+# the right scope (multi-label hosts drop their first label; localhost maps
+# to 127.0.0.1). Read by configuration.yml via `{{ env "AUTH_COOKIE_DOMAIN" }}`.
+[[env]]
+name = "AUTH_COOKIE_DOMAIN"
+value = "{{ service.domain | default('localhost') | cookie_domain }}"
 
 # Port for Caddy forward auth
 [[env]]

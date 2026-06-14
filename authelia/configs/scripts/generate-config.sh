@@ -4,33 +4,8 @@ CONFIG_DIR="$SERVICE_HOME/config"
 mkdir -p "$CONFIG_DIR"
 CONFIG_FILE="$CONFIG_DIR/configuration.yml"
 [ -f "$CONFIG_FILE" ] && exit 0
-DOMAIN="${DOMAIN:-localhost}"
-if [ "$DOMAIN" = "localhost" ]; then
-  COOKIE_DOMAIN="127.0.0.1"
-elif echo "$DOMAIN" | grep -q '\..*\.'; then
-  COOKIE_DOMAIN="${DOMAIN#*.}"
-else
-  COOKIE_DOMAIN="$DOMAIN"
-fi
-# Prefer the URL ryra resolved at install time (--url/--tailscale/Caddy
-# auto). Falls back to reconstruction only when service.external_url
-# wasn't set in the template context — e.g. localhost-only deployments.
-if [ -n "${AUTH_URL:-}" ]; then
-  AUTHELIA_URL="$AUTH_URL"
-elif [ "$DOMAIN" = "localhost" ]; then
-  AUTHELIA_URL="https://$COOKIE_DOMAIN"
-elif systemctl --user is-active caddy.service >/dev/null 2>&1; then
-  AUTHELIA_URL="https://$DOMAIN:8443"
-else
-  # External reverse proxy (nginx, Tailscale Funnel, …) terminates TLS
-  # on standard 443. The previous revision used $COOKIE_DOMAIN here,
-  # which broke multi-label domains: `auth.test.local` would become
-  # `https://test.local`, and authelia rejects requests whose Host
-  # doesn't match any configured authelia_url.
-  AUTHELIA_URL="https://$DOMAIN"
-fi
 
-# Use SMTP notifier when configured, otherwise fall back to filesystem
+# Use SMTP notifier when configured, otherwise fall back to filesystem.
 if [ -n "${AUTHELIA_NOTIFIER_SMTP_ADDRESS:-}" ]; then
   NOTIFIER_BLOCK="notifier:
   smtp:
@@ -41,6 +16,14 @@ else
     filename: '/config/notification.txt'"
 fi
 
+# The session cookie domain and authelia_url are read from the environment at
+# load time via authelia's config template engine (the install sets
+# X_AUTHELIA_CONFIG_FILTERS=template, which is also what resolves the JWKS
+# `{{ secret ... }}` below). ryra computes AUTH_COOKIE_DOMAIN and AUTH_URL into
+# the .env, so a later auth-URL change (e.g. switching to --tailscale) is
+# picked up on the next restart. We intentionally do NOT regenerate this file
+# when it already exists: register_oidc_client appends OIDC clients into it,
+# and regenerating would drop them.
 cat > "$CONFIG_FILE" <<YAML
 ---
 server:
@@ -52,8 +35,8 @@ authentication_backend:
     path: '/config/users_database.yml'
 session:
   cookies:
-    - domain: '$COOKIE_DOMAIN'
-      authelia_url: '$AUTHELIA_URL'
+    - domain: '{{ env "AUTH_COOKIE_DOMAIN" }}'
+      authelia_url: '{{ env "AUTH_URL" }}'
 storage:
   local:
     path: '/config/db.sqlite3'
