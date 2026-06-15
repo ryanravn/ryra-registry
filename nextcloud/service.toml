@@ -13,23 +13,57 @@ recommended = 2048
 name = "http"
 container_port = 80
 
-# --- Postgres env vars (shared via .env with the postgres sidecar) ---
+# --- Database: bundled Postgres (default) or bring your own. ---
+#     internal: the nextcloud-postgres.container sidecar (alias `postgres`); the
+#         POSTGRES_* vars init the sidecar and tell Nextcloud how to reach it,
+#         all shared via the one .env.
+#     external: the sidecar is never symlinked or pulled; point Nextcloud at an
+#         existing Postgres.
+[[choice]]
+name = "database"
+prompt = "Database"
+default = "internal"
 
-[[env]]
+[[choice.option]]
+name = "internal"
+label = "Bundled Postgres (managed sidecar)"
+quadlets = ["nextcloud-postgres.container"]
+[[choice.option.env]]
 name = "POSTGRES_DB"
 value = "nextcloud"
-
-[[env]]
+[[choice.option.env]]
 name = "POSTGRES_USER"
 value = "nextcloud"
-
-[[env]]
+[[choice.option.env]]
 name = "POSTGRES_PASSWORD"
 value = "{{secret.db_password}}"
-
-[[env]]
+[[choice.option.env]]
 name = "POSTGRES_HOST"
 value = "postgres"
+
+[[choice.option]]
+name = "external"
+label = "External Postgres (bring your own)"
+[[choice.option.env]]
+name = "POSTGRES_DB"
+value = "nextcloud"
+kind = "prompted"
+prompt = "Postgres database name"
+[[choice.option.env]]
+name = "POSTGRES_USER"
+value = "nextcloud"
+kind = "prompted"
+prompt = "Postgres username"
+[[choice.option.env]]
+name = "POSTGRES_PASSWORD"
+value = ""
+kind = "required"
+prompt = "Postgres password"
+[[choice.option.env]]
+name = "POSTGRES_HOST"
+value = ""
+kind = "required"
+prompt = "Postgres host"
 
 # --- Redis env vars ---
 

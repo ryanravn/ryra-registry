@@ -12,25 +12,45 @@ recommended = 2048
 name = "http"
 container_port = 3000
 
-# --- Postgres env vars (shared with postgres sidecar) ---
+# --- Database: bundled Postgres (default) or bring your own. ---
+#     internal: the twenty-postgres.container sidecar (alias `db`); the
+#         POSTGRES_* init vars and Twenty's PG_DATABASE_URL share the .env.
+#     external: the sidecar is never symlinked or pulled; point Twenty at an
+#         existing Postgres via the connection string.
+[[choice]]
+name = "database"
+prompt = "Database"
+default = "internal"
 
-[[env]]
+[[choice.option]]
+name = "internal"
+label = "Bundled Postgres (managed sidecar)"
+quadlets = ["twenty-postgres.container"]
+# Container-init vars, read by the sidecar from the shared .env.
+[[choice.option.env]]
 name = "POSTGRES_USER"
 value = "twenty"
-
-[[env]]
+[[choice.option.env]]
 name = "POSTGRES_PASSWORD"
 value = "{{secret.db_password}}"
-
-[[env]]
+[[choice.option.env]]
 name = "POSTGRES_DB"
 value = "twenty"
-
-# --- Twenty server env vars ---
-
-[[env]]
+# Twenty's connection, pointed at the sidecar.
+[[choice.option.env]]
 name = "PG_DATABASE_URL"
 value = "postgresql://twenty:{{secret.db_password}}@db:5432/twenty"
+
+[[choice.option]]
+name = "external"
+label = "External Postgres (bring your own)"
+[[choice.option.env]]
+name = "PG_DATABASE_URL"
+value = ""
+kind = "required"
+prompt = "Postgres connection string (postgresql://user:pass@host:5432/db)"
+
+# --- Twenty server env vars ---
 
 [[env]]
 name = "REDIS_URL"

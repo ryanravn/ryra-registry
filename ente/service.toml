@@ -39,19 +39,83 @@ name = "minio"
 container_port = 3200
 tailscale_https = 3200
 
-# --- Shared (Postgres) ---
+# --- Database: bundled Postgres (default) or bring your own. ---
+#     internal: the ente-postgres.container sidecar (alias `postgres`); the
+#         POSTGRES_* init vars and museum's ENTE_DB_* connection share the .env.
+#     external: the sidecar is never symlinked or pulled; point museum at an
+#         existing Postgres.
+[[choice]]
+name = "database"
+prompt = "Database"
+default = "internal"
 
-[[env]]
+[[choice.option]]
+name = "internal"
+label = "Bundled Postgres (managed sidecar)"
+quadlets = ["ente-postgres.container"]
+# Container-init vars, read by the sidecar from the shared .env.
+[[choice.option.env]]
 name = "POSTGRES_USER"
 value = "pguser"
-
-[[env]]
+[[choice.option.env]]
 name = "POSTGRES_PASSWORD"
 value = "{{secret.db_password}}"
-
-[[env]]
+[[choice.option.env]]
 name = "POSTGRES_DB"
 value = "ente_db"
+# Museum's connection, pointed at the sidecar.
+[[choice.option.env]]
+name = "ENTE_DB_HOST"
+value = "postgres"
+[[choice.option.env]]
+name = "ENTE_DB_PORT"
+value = "5432"
+[[choice.option.env]]
+name = "ENTE_DB_NAME"
+value = "ente_db"
+[[choice.option.env]]
+name = "ENTE_DB_USER"
+value = "pguser"
+[[choice.option.env]]
+name = "ENTE_DB_PASSWORD"
+value = "{{secret.db_password}}"
+[[choice.option.env]]
+name = "ENTE_DB_SSLMODE"
+value = "disable"
+
+[[choice.option]]
+name = "external"
+label = "External Postgres (bring your own)"
+[[choice.option.env]]
+name = "ENTE_DB_HOST"
+value = ""
+kind = "required"
+prompt = "Postgres host"
+[[choice.option.env]]
+name = "ENTE_DB_PORT"
+value = "5432"
+kind = "prompted"
+prompt = "Postgres port"
+[[choice.option.env]]
+name = "ENTE_DB_NAME"
+value = "ente_db"
+kind = "prompted"
+prompt = "Postgres database name"
+[[choice.option.env]]
+name = "ENTE_DB_USER"
+value = "pguser"
+kind = "prompted"
+prompt = "Postgres username"
+[[choice.option.env]]
+name = "ENTE_DB_PASSWORD"
+value = ""
+kind = "required"
+prompt = "Postgres password"
+[[choice.option.env]]
+name = "ENTE_DB_SSLMODE"
+value = "disable"
+kind = "prompted"
+prompt = "Postgres SSL mode (disable, require, verify-full)"
 
 # --- MinIO (S3-compatible object storage) ---
 
@@ -76,30 +140,6 @@ value = "{{secret.minio_password}}"
 [[env]]
 name = "ENTE_API_ORIGIN"
 value = "{{service.port_url.http}}"
-
-[[env]]
-name = "ENTE_DB_HOST"
-value = "postgres"
-
-[[env]]
-name = "ENTE_DB_PORT"
-value = "5432"
-
-[[env]]
-name = "ENTE_DB_NAME"
-value = "ente_db"
-
-[[env]]
-name = "ENTE_DB_USER"
-value = "pguser"
-
-[[env]]
-name = "ENTE_DB_PASSWORD"
-value = "{{secret.db_password}}"
-
-[[env]]
-name = "ENTE_DB_SSLMODE"
-value = "disable"
 
 # Ente's libsodium keys: base64 of an exact byte count (encryption=32, hash=64),
 # matching `openssl rand -base64 N`. Museum base64-decodes these and rejects any

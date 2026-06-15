@@ -17,43 +17,80 @@ recommended = 6144
 name = "http"
 container_port = 8080
 
-# --- Postgres (shared with zammad-postgres sidecar) ---
+# --- Database: bundled Postgres (default) or bring your own. ---
+#     internal: the zammad-postgres.container sidecar (alias `postgres`); the
+#         POSTGRES_* init vars and Zammad's POSTGRESQL_* connection share the
+#         one .env via EnvironmentFile.
+#     external: the sidecar is never symlinked or pulled; point Zammad at an
+#         existing Postgres.
+[[choice]]
+name = "database"
+prompt = "Database"
+default = "internal"
 
-[[env]]
+[[choice.option]]
+name = "internal"
+label = "Bundled Postgres (managed sidecar)"
+quadlets = ["zammad-postgres.container"]
+# Container-init vars, read by the sidecar from the shared .env.
+[[choice.option.env]]
 name = "POSTGRES_DB"
 value = "zammad_production"
-
-[[env]]
+[[choice.option.env]]
 name = "POSTGRES_USER"
 value = "zammad"
-
-[[env]]
+[[choice.option.env]]
 name = "POSTGRES_PASSWORD"
 value = "{{secret.db_password}}"
-
-# --- Zammad runtime env (all containers share this .env via EnvironmentFile) ---
-
-[[env]]
+# Zammad's connection, pointed at the sidecar.
+[[choice.option.env]]
 name = "POSTGRESQL_DB"
 value = "zammad_production"
-
-[[env]]
+[[choice.option.env]]
 name = "POSTGRESQL_HOST"
 value = "postgres"
-
-[[env]]
+[[choice.option.env]]
 name = "POSTGRESQL_USER"
 value = "zammad"
-
-[[env]]
+[[choice.option.env]]
 name = "POSTGRESQL_PASS"
 value = "{{secret.db_password}}"
-
-[[env]]
+[[choice.option.env]]
 name = "POSTGRESQL_PORT"
 value = "5432"
+[[choice.option.env]]
+name = "POSTGRESQL_OPTIONS"
+value = "?pool=50"
 
-[[env]]
+[[choice.option]]
+name = "external"
+label = "External Postgres (bring your own)"
+[[choice.option.env]]
+name = "POSTGRESQL_DB"
+value = "zammad_production"
+kind = "prompted"
+prompt = "Postgres database name"
+[[choice.option.env]]
+name = "POSTGRESQL_HOST"
+value = ""
+kind = "required"
+prompt = "Postgres host"
+[[choice.option.env]]
+name = "POSTGRESQL_USER"
+value = "zammad"
+kind = "prompted"
+prompt = "Postgres username"
+[[choice.option.env]]
+name = "POSTGRESQL_PASS"
+value = ""
+kind = "required"
+prompt = "Postgres password"
+[[choice.option.env]]
+name = "POSTGRESQL_PORT"
+value = "5432"
+kind = "prompted"
+prompt = "Postgres port"
+[[choice.option.env]]
 name = "POSTGRESQL_OPTIONS"
 value = "?pool=50"
 
