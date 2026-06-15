@@ -21,11 +21,11 @@ listeners:
 database:
   name: psycopg2
   args:
-    user: synapse
+    user: "${POSTGRES_USER}"
     password: "${POSTGRES_PASSWORD}"
-    database: synapse
-    host: db
-    port: 5432
+    database: "${POSTGRES_DB}"
+    host: "${POSTGRES_HOST}"
+    port: ${POSTGRES_PORT}
     cp_min: 5
     cp_max: 10
 

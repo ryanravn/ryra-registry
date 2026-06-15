@@ -30,15 +30,6 @@ container_port = 3002
 name = "auth"
 container_port = 3003
 
-# MinIO S3 object storage. Ente uploads/downloads go *directly* from the
-# browser to S3, so MinIO must be browser-reachable. Over Tailscale it answers
-# at https://<svc>.<tailnet>.ts.net:3200; museum signs presigned URLs against
-# this same host (and reaches it too). The S3 endpoint below points here.
-[[ports]]
-name = "minio"
-container_port = 3200
-tailscale_https = 3200
-
 # --- Database: bundled Postgres (default) or bring your own. ---
 #     internal: the ente-postgres.container sidecar (alias `postgres`); the
 #         POSTGRES_* init vars and museum's ENTE_DB_* connection share the .env.
@@ -117,16 +108,186 @@ value = "disable"
 kind = "prompted"
 prompt = "Postgres SSL mode (disable, require, verify-full)"
 
-# --- MinIO (S3-compatible object storage) ---
+# --- Object storage: bundled MinIO (default) or bring your own S3. ---
+#     internal: the ente-minio.container sidecar (alias `minio`) with a
+#         published, browser-reachable port; museum signs presigned URLs
+#         against it and the three S3 "providers" all point at it.
+#     external: the sidecar is never symlinked or pulled (no minio port);
+#         point all three providers at one existing S3-compatible store.
+[[choice]]
+name = "storage"
+prompt = "Object storage"
+default = "internal"
 
-[[env]]
+[[choice.option]]
+name = "internal"
+label = "Bundled MinIO (managed quadlet)"
+quadlets = ["ente-minio.container"]
+# MinIO S3 object storage. Ente uploads/downloads go *directly* from the
+# browser to S3, so MinIO must be browser-reachable. Over Tailscale it answers
+# at https://<svc>.<tailnet>.ts.net:3200; museum signs presigned URLs against
+# this same host (and reaches it too). The S3 endpoint below points here.
+[[choice.option.ports]]
+name = "minio"
+container_port = 3200
+tailscale_https = 3200
+[[choice.option.env]]
 name = "MINIO_ROOT_USER"
 value = "{{secret.minio_user}}"
 format = "hex"
-
-[[env]]
+[[choice.option.env]]
 name = "MINIO_ROOT_PASSWORD"
 value = "{{secret.minio_password}}"
+# S3 storage — all three "providers" point to the local MinIO instance.
+# Ente museum requires all three to be configured even for self-hosted.
+[[choice.option.env]]
+name = "ENTE_S3_ARE_LOCAL_BUCKETS"
+value = "true"
+[[choice.option.env]]
+name = "ENTE_S3_USE_PATH_STYLE_URLS"
+value = "true"
+[[choice.option.env]]
+name = "ENTE_S3_B2_EU_CEN_KEY"
+value = "{{secret.minio_user}}"
+[[choice.option.env]]
+name = "ENTE_S3_B2_EU_CEN_SECRET"
+value = "{{secret.minio_password}}"
+[[choice.option.env]]
+name = "ENTE_S3_B2_EU_CEN_ENDPOINT"
+value = "{{service.port_url.minio}}"
+[[choice.option.env]]
+name = "ENTE_S3_B2_EU_CEN_REGION"
+value = "eu-central-2"
+[[choice.option.env]]
+name = "ENTE_S3_B2_EU_CEN_BUCKET"
+value = "b2-eu-cen"
+[[choice.option.env]]
+name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_KEY"
+value = "{{secret.minio_user}}"
+[[choice.option.env]]
+name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_SECRET"
+value = "{{secret.minio_password}}"
+[[choice.option.env]]
+name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_ENDPOINT"
+value = "{{service.port_url.minio}}"
+[[choice.option.env]]
+name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_REGION"
+value = "eu-central-2"
+[[choice.option.env]]
+name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_BUCKET"
+value = "wasabi-eu-central-2-v3"
+[[choice.option.env]]
+name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_COMPLIANCE"
+value = "false"
+[[choice.option.env]]
+name = "ENTE_S3_SCW_EU_FR_V3_KEY"
+value = "{{secret.minio_user}}"
+[[choice.option.env]]
+name = "ENTE_S3_SCW_EU_FR_V3_SECRET"
+value = "{{secret.minio_password}}"
+[[choice.option.env]]
+name = "ENTE_S3_SCW_EU_FR_V3_ENDPOINT"
+value = "{{service.port_url.minio}}"
+[[choice.option.env]]
+name = "ENTE_S3_SCW_EU_FR_V3_REGION"
+value = "eu-central-2"
+[[choice.option.env]]
+name = "ENTE_S3_SCW_EU_FR_V3_BUCKET"
+value = "scw-eu-fr-v3"
+
+[[choice.option]]
+name = "external"
+label = "External S3 (bring your own)"
+# No MinIO sidecar, no published port. All three "providers" point at one
+# external S3-compatible store. Ente museum requires all three configured.
+[[choice.option.env]]
+name = "ENTE_S3_ARE_LOCAL_BUCKETS"
+value = "false"
+[[choice.option.env]]
+name = "ENTE_S3_USE_PATH_STYLE_URLS"
+value = "true"
+kind = "prompted"
+prompt = "Use path-style S3 URLs (true/false)"
+[[choice.option.env]]
+name = "ENTE_S3_B2_EU_CEN_KEY"
+value = ""
+kind = "required"
+prompt = "S3 access key"
+[[choice.option.env]]
+name = "ENTE_S3_B2_EU_CEN_SECRET"
+value = ""
+kind = "required"
+prompt = "S3 secret key"
+[[choice.option.env]]
+name = "ENTE_S3_B2_EU_CEN_ENDPOINT"
+value = ""
+kind = "required"
+prompt = "S3 endpoint URL"
+[[choice.option.env]]
+name = "ENTE_S3_B2_EU_CEN_REGION"
+value = "eu-central-2"
+kind = "prompted"
+prompt = "S3 region"
+[[choice.option.env]]
+name = "ENTE_S3_B2_EU_CEN_BUCKET"
+value = "b2-eu-cen"
+kind = "prompted"
+prompt = "S3 bucket name"
+[[choice.option.env]]
+name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_KEY"
+value = ""
+kind = "required"
+prompt = "S3 access key"
+[[choice.option.env]]
+name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_SECRET"
+value = ""
+kind = "required"
+prompt = "S3 secret key"
+[[choice.option.env]]
+name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_ENDPOINT"
+value = ""
+kind = "required"
+prompt = "S3 endpoint URL"
+[[choice.option.env]]
+name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_REGION"
+value = "eu-central-2"
+kind = "prompted"
+prompt = "S3 region"
+[[choice.option.env]]
+name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_BUCKET"
+value = "wasabi-eu-central-2-v3"
+kind = "prompted"
+prompt = "S3 bucket name"
+[[choice.option.env]]
+name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_COMPLIANCE"
+value = "false"
+kind = "prompted"
+prompt = "Wasabi compliance mode (true/false)"
+[[choice.option.env]]
+name = "ENTE_S3_SCW_EU_FR_V3_KEY"
+value = ""
+kind = "required"
+prompt = "S3 access key"
+[[choice.option.env]]
+name = "ENTE_S3_SCW_EU_FR_V3_SECRET"
+value = ""
+kind = "required"
+prompt = "S3 secret key"
+[[choice.option.env]]
+name = "ENTE_S3_SCW_EU_FR_V3_ENDPOINT"
+value = ""
+kind = "required"
+prompt = "S3 endpoint URL"
+[[choice.option.env]]
+name = "ENTE_S3_SCW_EU_FR_V3_REGION"
+value = "eu-central-2"
+kind = "prompted"
+prompt = "S3 region"
+[[choice.option.env]]
+name = "ENTE_S3_SCW_EU_FR_V3_BUCKET"
+value = "scw-eu-fr-v3"
+kind = "prompted"
+prompt = "S3 bucket name"
 
 # --- Museum (API server) ---
 
@@ -164,81 +325,6 @@ name = "ENTE_JWT_SECRET"
 value = "{{secret.jwt_secret}}"
 format = "base64_url"
 length = 32
-
-# S3 storage — all three "providers" point to the local MinIO instance.
-# Ente museum requires all three to be configured even for self-hosted.
-
-[[env]]
-name = "ENTE_S3_ARE_LOCAL_BUCKETS"
-value = "true"
-
-[[env]]
-name = "ENTE_S3_USE_PATH_STYLE_URLS"
-value = "true"
-
-[[env]]
-name = "ENTE_S3_B2_EU_CEN_KEY"
-value = "{{secret.minio_user}}"
-
-[[env]]
-name = "ENTE_S3_B2_EU_CEN_SECRET"
-value = "{{secret.minio_password}}"
-
-[[env]]
-name = "ENTE_S3_B2_EU_CEN_ENDPOINT"
-value = "{{service.port_url.minio}}"
-
-[[env]]
-name = "ENTE_S3_B2_EU_CEN_REGION"
-value = "eu-central-2"
-
-[[env]]
-name = "ENTE_S3_B2_EU_CEN_BUCKET"
-value = "b2-eu-cen"
-
-[[env]]
-name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_KEY"
-value = "{{secret.minio_user}}"
-
-[[env]]
-name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_SECRET"
-value = "{{secret.minio_password}}"
-
-[[env]]
-name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_ENDPOINT"
-value = "{{service.port_url.minio}}"
-
-[[env]]
-name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_REGION"
-value = "eu-central-2"
-
-[[env]]
-name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_BUCKET"
-value = "wasabi-eu-central-2-v3"
-
-[[env]]
-name = "ENTE_S3_WASABI_EU_CENTRAL_2_V3_COMPLIANCE"
-value = "false"
-
-[[env]]
-name = "ENTE_S3_SCW_EU_FR_V3_KEY"
-value = "{{secret.minio_user}}"
-
-[[env]]
-name = "ENTE_S3_SCW_EU_FR_V3_SECRET"
-value = "{{secret.minio_password}}"
-
-[[env]]
-name = "ENTE_S3_SCW_EU_FR_V3_ENDPOINT"
-value = "{{service.port_url.minio}}"
-
-[[env]]
-name = "ENTE_S3_SCW_EU_FR_V3_REGION"
-value = "eu-central-2"
-
-[[env]]
-name = "ENTE_S3_SCW_EU_FR_V3_BUCKET"
-value = "scw-eu-fr-v3"
 
 [[env]]
 name = "ENTE_CREDENTIALS_FILE"

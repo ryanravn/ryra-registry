@@ -34,19 +34,66 @@ value = "{{ service.external_url}}"
 name = "SERVICE_EXTERNAL_URL"
 value = "{{ service.external_url}}"
 
-# --- Postgres (sidecar) ---
+# --- Database: bundled Postgres (default) or bring your own. ---
+#     internal: the synapse-db.container sidecar (alias `db`); the POSTGRES_*
+#         init vars and synapse's homeserver.yaml connection share the .env.
+#         Synapse talks to the db over the podman network, so there's no
+#         published port to gate.
+#     external: the sidecar is never symlinked or pulled; point synapse at an
+#         existing Postgres.
+[[choice]]
+name = "database"
+prompt = "Database"
+default = "internal"
 
-[[env]]
+[[choice.option]]
+name = "internal"
+label = "Bundled Postgres (managed quadlet)"
+quadlets = ["synapse-db.container"]
+[[choice.option.env]]
 name = "POSTGRES_DB"
 value = "synapse"
-
-[[env]]
+[[choice.option.env]]
 name = "POSTGRES_USER"
 value = "synapse"
-
-[[env]]
+[[choice.option.env]]
 name = "POSTGRES_PASSWORD"
 value = "{{secret.db_password}}"
+[[choice.option.env]]
+name = "POSTGRES_HOST"
+value = "db"
+[[choice.option.env]]
+name = "POSTGRES_PORT"
+value = "5432"
+
+[[choice.option]]
+name = "external"
+label = "External Postgres (bring your own)"
+[[choice.option.env]]
+name = "POSTGRES_HOST"
+value = ""
+kind = "required"
+prompt = "Postgres host"
+[[choice.option.env]]
+name = "POSTGRES_PORT"
+value = "5432"
+kind = "prompted"
+prompt = "Postgres port"
+[[choice.option.env]]
+name = "POSTGRES_USER"
+value = "synapse"
+kind = "prompted"
+prompt = "Postgres username"
+[[choice.option.env]]
+name = "POSTGRES_DB"
+value = "synapse"
+kind = "prompted"
+prompt = "Postgres database name"
+[[choice.option.env]]
+name = "POSTGRES_PASSWORD"
+value = ""
+kind = "required"
+prompt = "Postgres password"
 
 # --- Synapse crypto / auth secrets ---
 
