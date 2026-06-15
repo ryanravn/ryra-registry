@@ -13,41 +13,73 @@ recommended = 512
 name = "http"
 container_port = 3000
 
-# --- Postgres env vars (shared via .env with the postgres sidecar) ---
-
-[[env]]
-name = "POSTGRES_USER"
-value = "forgejo"
-
-[[env]]
-name = "POSTGRES_PASSWORD"
-value = "{{secret.db_password}}"
-
-[[env]]
-name = "POSTGRES_DB"
-value = "forgejo"
-
-# --- Forgejo env vars ---
-
+# --- Database: bundled Postgres (default) or bring your own. ---
+#     internal: the forgejo-postgres.container sidecar (alias `postgres`); the
+#         POSTGRES_* init vars and forgejo's connection share the one .env.
+#     external: the sidecar is never symlinked or pulled; point forgejo at an
+#         existing Postgres.
 [[env]]
 name = "FORGEJO__database__DB_TYPE"
 value = "postgres"
 
-[[env]]
+[[choice]]
+name = "database"
+prompt = "Database"
+default = "internal"
+
+[[choice.option]]
+name = "internal"
+label = "Bundled Postgres (managed sidecar)"
+quadlets = ["forgejo-postgres.container"]
+# Container-init vars, read by the sidecar from the shared .env.
+[[choice.option.env]]
+name = "POSTGRES_USER"
+value = "forgejo"
+[[choice.option.env]]
+name = "POSTGRES_PASSWORD"
+value = "{{secret.db_password}}"
+[[choice.option.env]]
+name = "POSTGRES_DB"
+value = "forgejo"
+# Forgejo's connection, pointed at the sidecar.
+[[choice.option.env]]
 name = "FORGEJO__database__HOST"
 value = "postgres:5432"
-
-[[env]]
+[[choice.option.env]]
 name = "FORGEJO__database__NAME"
 value = "forgejo"
-
-[[env]]
+[[choice.option.env]]
 name = "FORGEJO__database__USER"
 value = "forgejo"
-
-[[env]]
+[[choice.option.env]]
 name = "FORGEJO__database__PASSWD"
 value = "{{secret.db_password}}"
+
+[[choice.option]]
+name = "external"
+label = "External Postgres (bring your own)"
+[[choice.option.env]]
+name = "FORGEJO__database__HOST"
+value = ""
+kind = "required"
+prompt = "Postgres host:port (e.g. db.example.com:5432)"
+[[choice.option.env]]
+name = "FORGEJO__database__NAME"
+value = "forgejo"
+kind = "prompted"
+prompt = "Postgres database name"
+[[choice.option.env]]
+name = "FORGEJO__database__USER"
+value = "forgejo"
+kind = "prompted"
+prompt = "Postgres username"
+[[choice.option.env]]
+name = "FORGEJO__database__PASSWD"
+value = ""
+kind = "required"
+prompt = "Postgres password"
+
+# --- Forgejo env vars ---
 
 [[env]]
 name = "FORGEJO__server__DOMAIN"
