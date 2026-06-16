@@ -15,6 +15,23 @@ name = "https"
 container_port = 8443
 host_port = 8443
 
+# How Caddy binds the host ports. Rootless podman can't bind <1024 unless the
+# kernel's `net.ipv4.ip_unprivileged_port_start` is lowered, so the default is
+# the always-works high ports; `direct` is an explicit opt-in for a public
+# origin and requires that sysctl (ryra offers to set it when you choose it).
+[[choice]]
+name = "binding"
+prompt = "Host port binding"
+default = "proxied"
+
+[[choice.option]]
+name = "proxied"
+label = "8080/8443 - rootless-safe; behind a proxy/NAT or on a LAN (default)"
+
+[[choice.option]]
+name = "direct"
+label = "80/443 - public origin; needs the unprivileged low-port sysctl"
+
 [integrations]
 auth = []
 smtp = false
