@@ -186,6 +186,11 @@ smtp = true
 backup = true
 
 [backup]
+# Online backup: backup-pre.sh takes a live mariadb-dump (single-transaction)
+# and restic snapshots the content-addressable shared/ tree alongside it, with
+# no service stop. ryra runs only the hooks here -- it never stops, chowns, or
+# wipes -- so seafile keeps its own restore (pause seahub, re-import the dump).
+online = true
 paths = ["shared", ".backup"]
 
 [mappings.smtp]
