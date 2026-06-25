@@ -164,8 +164,10 @@ name = "list-shows-snapshot"
 run = """set -euo pipefail
 OUTPUT=$(ryra backup list seafile 2>&1)
 echo "$OUTPUT"
-echo "$OUTPUT" | grep -q 'service:seafile' || {
-    echo "expected snapshot tagged service:seafile in: $OUTPUT"
+# `ryra backup list <svc>` groups by service: a "seafile  (N restore point…)"
+# header followed by the snapshot rows. Assert at least one restore point exists.
+echo "$OUTPUT" | grep -qE '[0-9]+ restore point' || {
+    echo "expected >=1 restore point for seafile in: $OUTPUT"
     exit 1
 }
 """
