@@ -161,6 +161,42 @@ prompt = "Admin password"
 name = "CACHE_PROVIDER"
 value = "redis"
 
+# --- OIDC account identity model ---
+# Controls how Seafile derives the *username* for SSO-provisioned accounts.
+# configs/scripts/inject-oauth.sh reads OAUTH_IDENTITY_SOURCE and writes the
+# matching OAUTH_ATTRIBUTE_MAP into seahub_settings.py. Only relevant when an
+# OIDC provider is wired up; harmless otherwise.
+#
+#   uid (default): SSO accounts are keyed on the immutable OIDC `sub`
+#       (`<sub>@auth.local` usernames); the email is stored as contact_email.
+#       Stable across email changes. Footgun: if a native account already owns
+#       that email (e.g. the INIT_SEAFILE_ADMIN_EMAIL admin), email login
+#       resolves to the SSO account via contact_email and the native account is
+#       shadowed — "Incorrect email or password" despite a correct password.
+#   email: the SSO account username IS the IdP email, so it coincides with a
+#       native account of the same address (no `@auth.local`, no shadowing).
+#       Trade-off: email is mutable, so a changed IdP address orphans the
+#       account. Switching uid->email on a live deployment re-provisions existing
+#       SSO users as new accounts on next login — pick before first SSO login.
+[[choice]]
+name = "oidc_identity"
+prompt = "OIDC account identity (how SSO usernames are derived)"
+default = "uid"
+
+[[choice.option]]
+name = "uid"
+label = "Stable subject ID (recommended) — SSO users get <sub>@auth.local usernames"
+[[choice.option.env]]
+name = "OAUTH_IDENTITY_SOURCE"
+value = "uid"
+
+[[choice.option]]
+name = "email"
+label = "IdP email — SSO account username is the email (email login matches it)"
+[[choice.option.env]]
+name = "OAUTH_IDENTITY_SOURCE"
+value = "email"
+
 # --- Auth integration ---
 # Seafile reads OAuth config from seahub_settings.py (a Python file), not env
 # vars. The auth mappings below write OAUTH_* vars into the .env file.
