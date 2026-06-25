@@ -130,7 +130,7 @@ timeout = 60
 [[steps]]
 action = "shell"
 name = "backup-run"
-run = "ryra backup run seafile"
+run = "ryra backup manual seafile"
 timeout = 600
 
 # 7. The stack must still be up immediately after backup-run — this
