@@ -179,6 +179,14 @@ jobs:
           sudo apt-get install -y uidmap dbus-user-session restic
           podman --version
 
+          # Browser SSO tests (*-auth.spec.ts) run via bun + playwright. The VM
+          # image ships these at /opt/playwright; the --no-vm runner doesn't, so
+          # install bun and the chromium browser here.
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.bun/bin:$PATH"
+          ( cd tests/browser && bun install --frozen-lockfile && bunx playwright install --with-deps chromium )
+
           # systemctl --user requires either a login session OR linger.
           # GitHub runners shell us in non-interactively, so linger is
           # the only path that works.
@@ -230,6 +238,14 @@ jobs:
           sudo apt-get install -y -t plucky podman crun conmon netavark aardvark-dns
           sudo apt-get install -y uidmap dbus-user-session restic
           podman --version
+
+          # Browser SSO tests (*-auth.spec.ts) run via bun + playwright. The VM
+          # image ships these at /opt/playwright; the --no-vm runner doesn't, so
+          # install bun and the chromium browser here.
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.bun/bin:$PATH"
+          ( cd tests/browser && bun install --frozen-lockfile && bunx playwright install --with-deps chromium )
 
           sudo loginctl enable-linger "$USER"
           sleep 2
