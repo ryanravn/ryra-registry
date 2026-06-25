@@ -164,8 +164,20 @@ jobs:
           chmod +x /tmp/ryra-bin/ryra
           echo "/tmp/ryra-bin" >> "$GITHUB_PATH"
 
+          # Ubuntu 24.04 ships podman 4.9.3, but ryra's doctor requires >= 5.3
+          # (quadlet env expansion in PublishPort/Volume). Pull podman + its
+          # container runtime stack from Ubuntu 25.04 (plucky) via apt pinning,
+          # keeping everything else on noble so the rest of the runner is intact.
+          echo "deb http://archive.ubuntu.com/ubuntu plucky main universe" \
+            | sudo tee /etc/apt/sources.list.d/plucky.list >/dev/null
+          printf 'Package: *\nPin: release n=plucky\nPin-Priority: 100\n' \
+            | sudo tee /etc/apt/preferences.d/99-plucky >/dev/null
           sudo apt-get update
-          sudo apt-get install -y podman uidmap dbus-user-session crun
+          # podman stack from plucky; restic for the backup lifecycle tests;
+          # uidmap/dbus-user-session for rootless + systemd --user.
+          sudo apt-get install -y -t plucky podman crun conmon netavark aardvark-dns
+          sudo apt-get install -y uidmap dbus-user-session restic
+          podman --version
 
           # systemctl --user requires either a login session OR linger.
           # GitHub runners shell us in non-interactively, so linger is
@@ -204,8 +216,20 @@ jobs:
           chmod +x /tmp/ryra-bin/ryra
           echo "/tmp/ryra-bin" >> "$GITHUB_PATH"
 
+          # Ubuntu 24.04 ships podman 4.9.3, but ryra's doctor requires >= 5.3
+          # (quadlet env expansion in PublishPort/Volume). Pull podman + its
+          # container runtime stack from Ubuntu 25.04 (plucky) via apt pinning,
+          # keeping everything else on noble so the rest of the runner is intact.
+          echo "deb http://archive.ubuntu.com/ubuntu plucky main universe" \
+            | sudo tee /etc/apt/sources.list.d/plucky.list >/dev/null
+          printf 'Package: *\nPin: release n=plucky\nPin-Priority: 100\n' \
+            | sudo tee /etc/apt/preferences.d/99-plucky >/dev/null
           sudo apt-get update
-          sudo apt-get install -y podman uidmap dbus-user-session crun
+          # podman stack from plucky; restic for the backup lifecycle tests;
+          # uidmap/dbus-user-session for rootless + systemd --user.
+          sudo apt-get install -y -t plucky podman crun conmon netavark aardvark-dns
+          sudo apt-get install -y uidmap dbus-user-session restic
+          podman --version
 
           sudo loginctl enable-linger "$USER"
           sleep 2
