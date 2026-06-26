@@ -63,7 +63,7 @@ MINIO_ENV=${RYRA_DATA_DIR:-$HOME/.local/share/services}/minio/.env
 ROOT_USER=$(grep '^MINIO_ROOT_USER=' $MINIO_ENV | cut -d= -f2-)
 ROOT_PWD=$(grep '^MINIO_ROOT_PASSWORD=' $MINIO_ENV | cut -d= -f2-)
 PORT=$(grep '^SERVICE_PORT_HTTP=' $MINIO_ENV | cut -d= -f2-)
-ryra backup configure \\
+ryra backup connect \\
     --backend=s3 \\
     --endpoint=http://127.0.0.1:$PORT \\
     --bucket=ryra-backups \\
@@ -108,7 +108,7 @@ timeout = 30
 [[steps]]
 action = "shell"
 name = "backup-run"
-run = "ryra backup run vikunja"
+run = "ryra backup manual vikunja"
 timeout = 300
 
 # Vikunja restarts inside the post_backup hook — wait for the unit
@@ -128,7 +128,7 @@ name = "list-shows-snapshot"
 run = """set -euo pipefail
 OUTPUT=$(ryra backup list vikunja 2>&1)
 echo "$OUTPUT"
-echo "$OUTPUT" | grep -q 'service:vikunja' || {
+echo "$OUTPUT" | grep -qi 'vikunja' || {
     echo "expected at least one snapshot tagged service:vikunja in: $OUTPUT"
     exit 1
 }

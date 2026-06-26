@@ -10,7 +10,7 @@
 #
 # Critically, this test does *not* stop seafile around the backup —
 # the new flow keeps the stack live. The mid-test http probe between
-# planting sentinels and `ryra backup run` would fail if anything
+# planting sentinels and `ryra backup manual` would fail if anything
 # took it down.
 [test]
 name = "backup-minio-seafile-lifecycle"
