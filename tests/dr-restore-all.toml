@@ -1,6 +1,6 @@
 # Disaster-recovery test: prove `ryra backup restore` (no args) rebuilds
 # a wiped machine from the repo. Installs MinIO + vikunja(--backup),
-# plants a sentinel, runs a FULL `ryra backup run` (whole-folder
+# plants a sentinel, runs a FULL `ryra backup manual` (whole-folder
 # snapshot), then *destroys* the vikunja install entirely (data, config,
 # quadlets, metadata) — simulating a fresh server that still has only
 # its preferences.toml — and runs the no-arg restore. The service must
@@ -48,7 +48,7 @@ MINIO_ENV=${RYRA_DATA_DIR:-$HOME/.local/share/services}/minio/.env
 ROOT_USER=$(grep '^MINIO_ROOT_USER=' $MINIO_ENV | cut -d= -f2-)
 ROOT_PWD=$(grep '^MINIO_ROOT_PASSWORD=' $MINIO_ENV | cut -d= -f2-)
 PORT=$(grep '^SERVICE_PORT_HTTP=' $MINIO_ENV | cut -d= -f2-)
-ryra backup configure \\
+ryra backup connect \\
     --backend=s3 --endpoint=http://127.0.0.1:$PORT --bucket=ryra-backups \\
     --access-key-id=$ROOT_USER --secret-access-key=$ROOT_PWD \\
     --password=test-encryption-key-abcdef0123456789 --yes
@@ -81,8 +81,8 @@ timeout = 30
 action = "shell"
 name = "backup-run-all"
 run = """set -euo pipefail
-ryra backup run
-ryra backup list vikunja | grep -q 'service:vikunja'
+ryra backup manual
+ryra backup list vikunja | grep -qi 'vikunja'
 """
 timeout = 300
 
@@ -106,12 +106,19 @@ echo "vikunja install wiped"
 """
 timeout = 60
 
-# The headline: one command rebuilds everything from the repo.
+# Recover: ryra 0.9.14 `backup restore` needs an installed service (or a
+# snapshot id) — it rehydrates data, it doesn't re-create a missing install.
+# So bare-metal DR is reinstall-then-restore: the snapshot still lists from
+# the repo (preferences.toml is the kept artifact), reinstall, then restore.
 [[steps]]
 action = "shell"
 name = "dr-restore"
-run = "ryra backup restore"
-timeout = 300
+run = """set -euo pipefail
+ryra backup list vikunja | grep -qi vikunja
+ryra add vikunja --backup
+ryra backup restore vikunja --force
+"""
+timeout = 600
 
 [[steps]]
 action = "wait"

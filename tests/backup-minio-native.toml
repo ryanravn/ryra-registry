@@ -47,7 +47,7 @@ MINIO_ENV=${RYRA_DATA_DIR:-$HOME/.local/share/services}/minio/.env
 ROOT_USER=$(grep '^MINIO_ROOT_USER=' $MINIO_ENV | cut -d= -f2-)
 ROOT_PWD=$(grep '^MINIO_ROOT_PASSWORD=' $MINIO_ENV | cut -d= -f2-)
 PORT=$(grep '^SERVICE_PORT_HTTP=' $MINIO_ENV | cut -d= -f2-)
-ryra backup configure \\
+ryra backup connect \\
     --backend=s3 --endpoint=http://127.0.0.1:$PORT --bucket=ryra-backups \\
     --access-key-id=$ROOT_USER --secret-access-key=$ROOT_PWD \\
     --password=test-encryption-key-abcdef0123456789 --yes
@@ -80,7 +80,7 @@ timeout = 30
 [[steps]]
 action = "shell"
 name = "backup-run"
-run = "ryra backup run native-hello"
+run = "ryra backup manual native-hello"
 timeout = 300
 [[steps]]
 action = "wait"
