@@ -59,6 +59,18 @@ OAUTH_TOKEN_URL = "${OAUTH_INTERNAL_DOMAIN}/api/oidc/token"
 OAUTH_USER_INFO_URL = "${OAUTH_INTERNAL_DOMAIN}/api/oidc/userinfo"
 OAUTH_SCOPE = ["openid", "profile", "email"]
 OAUTH_ATTRIBUTE_MAP = ${OAUTH_ATTRIBUTE_MAP}
+
+# Enable browser-based SSO for native clients (desktop, mobile, Obsidian
+# plugin, ...). This registers the /api2/client-sso-link/ endpoints: the client
+# opens a one-time link in the system browser, the user authenticates through
+# the OAuth provider above, and the client polls for the issued API token.
+#
+# This is required (not optional) once OAuth is the login method: SSO-only users
+# have no password, so the password-based /api2/auth-token/ flow that native
+# clients otherwise use cannot work for them. Without this flag those clients
+# get an HTML 404 from /api2/client-sso-link/ (the endpoint is unregistered),
+# which surfaces in clients as a cryptic "<!DOCTYPE ... is not valid JSON".
+CLIENT_SSO_VIA_LOCAL_BROWSER = True
 EOF
 
 if ! grep -q seahub_settings_oauth "$CONF/seahub_settings.py"; then
