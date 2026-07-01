@@ -308,3 +308,58 @@ test "$ACTUAL" = "original-file" || {
 }
 """
 timeout = 30
+
+# storage=s3 (bundled MinIO): the stack comes up with storage-api talking S3 to
+# MinIO, the bucket is auto-created, and an uploaded object actually lands in the
+# MinIO bucket — proving the S3 backend is really wired, not just "healthy".
+[[tests]]
+name = "s3"
+ram = 4608
+[[tests.steps]]
+action = "add"
+service = "supabase"
+args = "--choose storage=s3"
+timeout = 1200
+[[tests.steps]]
+action = "wait"
+service = "supabase"
+timeout = 600
+[[tests.steps]]
+action = "shell"
+name = "api-ready"
+run = ". ${RYRA_DATA_DIR:-$HOME/.local/share/services}/supabase/.env && for i in $(seq 1 60); do curl -so /dev/null -w '%{http_code}' http://localhost:$SERVICE_PORT_HTTP/ | grep -q '[0-9]' && exit 0; sleep 2; done; exit 1"
+timeout = 150
+[[tests.steps]]
+action = "shell"
+name = "minio-bucket-ready"
+run = """set -euo pipefail
+ENV=${RYRA_DATA_DIR:-$HOME/.local/share/services}/supabase/.env
+ROOT_USER=$(grep '^MINIO_ROOT_USER=' "$ENV" | cut -d= -f2-)
+ROOT_PWD=$(grep '^MINIO_ROOT_PASSWORD=' "$ENV" | cut -d= -f2-)
+BUCKET=$(grep '^GLOBAL_S3_BUCKET=' "$ENV" | cut -d= -f2-)
+for i in $(seq 1 30); do
+    podman exec supabase-minio mc alias set local http://localhost:9000 "$ROOT_USER" "$ROOT_PWD" >/dev/null 2>&1 && break
+    sleep 2
+done
+podman exec supabase-minio mc ls "local/${BUCKET}" >/dev/null
+echo "MinIO bucket ${BUCKET} present"
+"""
+timeout = 180
+[[tests.steps]]
+action = "shell"
+name = "storage-upload-lands-in-minio"
+run = """set -euo pipefail
+ENV=${RYRA_DATA_DIR:-$HOME/.local/share/services}/supabase/.env
+PORT=$(grep '^SERVICE_PORT_HTTP=' "$ENV" | cut -d= -f2-)
+KEY=$(grep '^SERVICE_KEY=' "$ENV" | cut -d= -f2-)
+BUCKET=$(grep '^GLOBAL_S3_BUCKET=' "$ENV" | cut -d= -f2-)
+BASE=http://localhost:$PORT/storage/v1
+for i in $(seq 1 60); do curl -sf -H "apikey: $KEY" -H "Authorization: Bearer $KEY" "$BASE/bucket" >/dev/null 2>&1 && break; sleep 2; done
+curl -sf -H "apikey: $KEY" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d '{"name":"e2e","id":"e2e","public":true}' -X POST "$BASE/bucket" >/dev/null
+echo "hello-s3" > /tmp/e2e-obj.txt
+curl -sf -H "apikey: $KEY" -H "Authorization: Bearer $KEY" -F file=@/tmp/e2e-obj.txt -X POST "$BASE/object/e2e/hello.txt" >/dev/null
+sleep 3
+podman exec supabase-minio mc ls -r "local/${BUCKET}" | grep -q hello.txt
+echo "uploaded object present in MinIO — S3 backend wired"
+"""
+timeout = 180

@@ -30,6 +30,65 @@ container_port = 6543
 host_port = 6543
 protocol = "tcp"
 
+# --- Object storage: local file (default) or bundled MinIO (S3). ---
+#     file: storage-api writes objects to storage-data/ on the host.
+#     s3: the supabase-minio.container sidecar (alias `minio`); storage-api
+#         talks S3 to it, and its bucket is auto-created by the container's
+#         ExecStartPost on first boot. supabase-storage retries (Restart=always)
+#         until MinIO + the bucket are ready, so no explicit ordering is needed.
+[[choice]]
+name = "storage"
+prompt = "Object storage"
+default = "file"
+
+[[choice.option]]
+name = "file"
+label = "Local file storage (on the host)"
+[[choice.option.env]]
+name = "STORAGE_BACKEND"
+value = "file"
+[[choice.option.env]]
+name = "FILE_STORAGE_BACKEND_PATH"
+value = "/var/lib/storage"
+# storage-api requires GLOBAL_S3_BUCKET set even in file mode (root folder name).
+[[choice.option.env]]
+name = "GLOBAL_S3_BUCKET"
+value = "stub"
+
+[[choice.option]]
+name = "s3"
+label = "S3 object storage (bundled MinIO)"
+quadlets = ["supabase-minio.container"]
+[[choice.option.env]]
+name = "STORAGE_BACKEND"
+value = "s3"
+# MinIO root creds, shared by the minio container and storage-api's S3 client.
+[[choice.option.env]]
+name = "MINIO_ROOT_USER"
+value = "{{secret.minio_user}}"
+format = "hex"
+[[choice.option.env]]
+name = "MINIO_ROOT_PASSWORD"
+value = "{{secret.minio_password}}"
+[[choice.option.env]]
+name = "GLOBAL_S3_BUCKET"
+value = "supabase-storage"
+[[choice.option.env]]
+name = "GLOBAL_S3_ENDPOINT"
+value = "http://minio:9000"
+[[choice.option.env]]
+name = "GLOBAL_S3_PROTOCOL"
+value = "http"
+[[choice.option.env]]
+name = "GLOBAL_S3_FORCE_PATH_STYLE"
+value = "true"
+[[choice.option.env]]
+name = "AWS_ACCESS_KEY_ID"
+value = "{{secret.minio_user}}"
+[[choice.option.env]]
+name = "AWS_SECRET_ACCESS_KEY"
+value = "{{secret.minio_password}}"
+
 # --- Shared secrets ---
 
 [[env]]
@@ -324,24 +383,12 @@ name = "FILE_SIZE_LIMIT"
 value = "52428800"
 
 [[env]]
-name = "STORAGE_BACKEND"
-value = "file"
-
-[[env]]
-name = "FILE_STORAGE_BACKEND_PATH"
-value = "/var/lib/storage"
-
-[[env]]
 name = "TENANT_ID"
 value = "stub"
 
 [[env]]
 name = "REGION"
 value = "local"
-
-[[env]]
-name = "GLOBAL_S3_BUCKET"
-value = "stub"
 
 [[env]]
 name = "ENABLE_IMAGE_TRANSFORMATION"

@@ -3,7 +3,11 @@ Description=Supabase Storage
 StartLimitIntervalSec=300
 StartLimitBurst=3
 Requires=supabase-db.service supabase-rest.service supabase-imgproxy.service
-After=supabase-db.service supabase-rest.service supabase-imgproxy.service
+# storage=s3 deploys supabase-minio as the S3 backend; Wants (soft) pulls it into
+# the start chain when present and is harmlessly ignored in file mode where it
+# isn't deployed. Restart=always covers ordering, but After keeps it tidy.
+Wants=supabase-minio.service
+After=supabase-db.service supabase-rest.service supabase-imgproxy.service supabase-minio.service
 
 [Container]
 ContainerName=supabase-storage

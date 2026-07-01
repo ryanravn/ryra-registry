@@ -1,0 +1,32 @@
+[Unit]
+Description=Supabase MinIO (S3 object storage)
+StartLimitIntervalSec=300
+StartLimitBurst=3
+Requires=supabase-network.service
+After=supabase-network.service
+
+[Container]
+ContainerName=supabase-minio
+Image=docker.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+# storage-api reaches MinIO server-to-server over the podman network, so there
+# is no published port. Console on :9001 stays internal too.
+Network=supabase.network:alias=minio
+Volume=${SERVICE_HOME}/minio-data:/data:Z,U
+Exec=server /data --address :9000 --console-address :9001
+Pull=missing
+EnvironmentFile=%h/.local/share/services/supabase/.env
+HealthCmd=mc ready local || exit 1
+HealthStartPeriod=15s
+HealthInterval=10s
+HealthTimeout=5s
+HealthRetries=5
+
+[Service]
+EnvironmentFile=%h/.local/share/services/supabase/.env
+Restart=always
+RestartSec=10
+TimeoutStartSec=300
+ExecStartPost=/bin/bash ${SERVICE_HOME}/configs/scripts/create-minio-bucket.sh
+
+[Install]
+WantedBy=default.target
