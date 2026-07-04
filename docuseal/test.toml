@@ -1,24 +1,17 @@
 # docuseal tests — basic install + SMTP delivery.
 
-# Basic install: add, wait, probe the first-run admin signup page,
-# assert the sqlite db landed (proof Rails migrations ran).
+# Basic install: probe the first-run admin signup page, assert the sqlite
+# db landed (proof Rails migrations ran). Setup is the default add + wait.
 [[tests]]
 name = "docuseal"
-[[tests.steps]]
-action = "add"
-service = "docuseal"
-timeout = 300
-[[tests.steps]]
-action = "wait"
-service = "docuseal"
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "docuseal-responds"
 url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
 service = "docuseal"
 poll = { interval = 2, attempts = 45 }
 timeout = 120
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "sqlite-db-initialised"
 run = "test -s ${RYRA_DATA_DIR:-$HOME/.local/share/services}/docuseal/data/docuseal/db.sqlite3"
@@ -26,7 +19,8 @@ timeout = 30
 
 # SMTP: `rails runner` triggers a mail through the app's configured
 # ActionMailer, bypassing the need for admin signup + API tokens.
-# STARTTLS is force-disabled because inbucket is plain SMTP.
+# STARTTLS is force-disabled because inbucket is plain SMTP. Stays a
+# lifecycle test: `mail` reads the inbucket fixture.
 [[tests]]
 name = "smtp"
 [[tests.steps]]

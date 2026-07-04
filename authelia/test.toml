@@ -1,36 +1,39 @@
 # authelia tests — basic install + SMTP delivery via inbucket.
 
 # Basic install: caddy (required for HTTPS) + authelia, then probe the
-# health endpoint and assert the data dir is there.
+# health endpoint and assert the data dir is there. Explicit setup: the
+# authelia `add` carries a `--url` and an admin-password env, so it can't
+# be the defaulted `add authelia` + `wait`.
 [[tests]]
 name = "authelia"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "caddy"
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "caddy"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "authelia"
 args = "--url https://auth.internal:8443"
 env = { AUTHELIA_ADMIN_PASSWORD = "testpassword123" }
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "authelia"
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "health-check"
 url = "http://127.0.0.1:$SERVICE_PORT_HTTP/api/health"
 service = "authelia"
 poll = { interval = 2, attempts = 15 }
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "data-dir-created"
 run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/authelia"
 
 # SMTP: install with --smtp=inbucket, trigger a password-reset email,
-# poll inbucket until the mail arrives for the admin account.
+# poll inbucket until the mail arrives for the admin account. Stays a
+# lifecycle test: `mail` reads the inbucket fixture.
 [[tests]]
 name = "smtp"
 [[tests.steps]]

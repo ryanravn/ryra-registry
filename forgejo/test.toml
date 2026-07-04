@@ -1,36 +1,28 @@
 # forgejo tests — install, SMTP delivery via inbucket, and full
 # browser-driven OIDC flow via authelia + caddy.
 #
-# Uses the new multi-test format: three independent `[[tests]]` blocks,
-# each with its own `[[tests.steps]]`. Test names become:
-#   - `forgejo`         (plain install + HTTP probe)
-#   - `forgejo-smtp`    (outbound mail via inbucket)
-#   - `forgejo-oidc`    (SSO via authelia + playwright)
+# Test names:
+#   - `forgejo`         (plain install + HTTP probe — a check test)
+#   - `forgejo-smtp`    (outbound mail via inbucket — stays lifecycle)
+#   - `forgejo-oidc`    (SSO via authelia + playwright — a check test)
 
-# Plain install. Mirrors the old per-service test: adds forgejo, checks
-# HTTP responds, and asserts postgres is not leaking to the host (it
-# should be pod-internal).
+# Plain install. Checks HTTP responds and asserts postgres is not leaking
+# to the host (it should be pod-internal). Setup is the default add + wait.
 [[tests]]
 name = "forgejo"
-[[tests.steps]]
-action = "add"
-service = "forgejo"
-[[tests.steps]]
-action = "wait"
-service = "forgejo"
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "forgejo-responds"
 url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
 service = "forgejo"
 poll = { interval = 2, attempts = 30 }
 timeout = 90
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "postgres-not-on-localhost"
 run = "! ss -tlnp | grep -q ':5432 '"
 timeout = 5
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "data-dir-created"
 run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/forgejo"
@@ -38,7 +30,8 @@ run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/forgejo"
 # SMTP delivery via inbucket. Caddy is required so that inbucket + forgejo
 # share a podman network and can resolve each other by container name.
 # Creates a user, triggers a broadcast mail, then polls inbucket's HTTP
-# API until the message shows up in the target mailbox.
+# API until the message shows up in the target mailbox. Stays a lifecycle
+# test: `mail` reads the inbucket fixture.
 [[tests]]
 name = "smtp"
 [[tests.steps]]
@@ -88,38 +81,39 @@ action = "mail"
 name = "mail-delivered-to-inbucket"
 mailbox = "smtptest"
 contains = "ryra smtp test"
+timeout = 90
 
 # Full SSO flow: caddy (TLS), authelia (IdP), forgejo wired up with
 # --auth, then a Playwright spec that actually clicks through the login.
-timeout = 90
-
+# Explicit setup: the adds carry args/env and there are three services.
+# The login-flow assertions are all live-safe reads.
 [[tests]]
 name = "oidc"
 browser = true
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "caddy"
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "caddy"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "authelia"
 args = "--url https://auth.internal:8443"
 env = { AUTHELIA_ADMIN_USER = "testuser", AUTHELIA_ADMIN_PASSWORD = "testpassword123" }
 timeout = 300
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "authelia"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "forgejo"
 args = "--auth"
 timeout = 600
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "forgejo"
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "oidc-registered"
 run = """FORGEJO_PORT=$(grep SERVICE_PORT_HTTP ${RYRA_DATA_DIR:-$HOME/.local/share/services}/forgejo/.env | cut -d= -f2)
@@ -132,18 +126,19 @@ podman exec -u git forgejo forgejo admin auth list 2>&1 || true
 journalctl --user -u forgejo.service --no-pager -n 20 2>&1 | grep -iE 'oidc|oauth|error|fail' || true
 exit 1"""
 timeout = 150
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "forgejo-responds"
 url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
 service = "forgejo"
 poll = { interval = 2, attempts = 30 }
 timeout = 90
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "authelia-via-caddy"
 url = "https://auth.internal:8443"
-[[tests.steps]]
+service = "authelia"
+[[tests.checks]]
 action = "playwright"
 name = "playwright-auth-flow"
 spec = "forgejo-auth.spec.ts"

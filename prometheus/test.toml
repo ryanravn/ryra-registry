@@ -1,21 +1,15 @@
-# prometheus tests - install + self-scrape.
+# prometheus tests - install + self-scrape. Setup is the default add + wait.
 
 [[tests]]
 name = "prometheus"
-[[tests.steps]]
-action = "add"
-service = "prometheus"
-[[tests.steps]]
-action = "wait"
-service = "prometheus"
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "healthy-endpoint"
 url = "http://127.0.0.1:$SERVICE_PORT_HTTP/-/healthy"
 service = "prometheus"
 poll = { interval = 2, attempts = 20 }
 timeout = 60
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "self-scrape-up"
 run = """. ${RYRA_DATA_DIR:-$HOME/.local/share/services}/prometheus/.env
@@ -26,7 +20,7 @@ done
 echo "targets never came up: $(curl -s http://127.0.0.1:$SERVICE_PORT_HTTP/api/v1/targets)"
 exit 1"""
 timeout = 90
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "data-dir-created"
 run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/prometheus/data"

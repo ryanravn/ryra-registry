@@ -2,37 +2,40 @@
 # authelia + caddy. AUTOWIZARD_JSON + run-autowizard.sh together remove
 # the need for the first-run web wizard.
 
+# Basic install. Explicit setup keeps the 900s add timeout (zammad is slow
+# to come up; the defaulted bracket would only give 300s). Checks are
+# live-safe reads (the autowizard-admin check reads via rails runner).
 [[tests]]
 name = "zammad"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "zammad"
 timeout = 900
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "zammad"
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "zammad-responds"
 url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
 service = "zammad"
 poll = { interval = 5, attempts = 60 }
 timeout = 300
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "postgres-not-on-localhost"
 run = "! ss -tlnp | grep -q ':5432 '"
 timeout = 5
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "elasticsearch-not-on-localhost"
 run = "! ss -tlnp | grep -q ':9200 '"
 timeout = 5
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "data-dir-created"
 run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/zammad"
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "autowizard-created-admin"
 run = """for i in $(seq 1 60); do
@@ -44,33 +47,35 @@ timeout = 300
 
 # Full SSO flow: caddy (TLS), authelia (IdP), zammad wired up with
 # --auth, then a Playwright spec that actually clicks through the login.
+# Explicit setup: adds carry args/env and there are three services. The
+# rails-read + login-flow assertions are all live-safe.
 [[tests]]
 name = "oidc"
 browser = true
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "caddy"
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "caddy"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "authelia"
 args = "--url https://auth.internal:8443"
 env = { AUTHELIA_ADMIN_USER = "testuser", AUTHELIA_ADMIN_PASSWORD = "testpassword123", AUTHELIA_ADMIN_EMAIL = "admin@example.com" }
 timeout = 300
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "authelia"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "zammad"
 args = "--auth"
 timeout = 900
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "zammad"
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "oidc-configured"
 run = """for i in $(seq 1 60); do
@@ -81,18 +86,19 @@ echo "OIDC never enabled"
 journalctl --user -u zammad.service --no-pager -n 30 2>&1 | grep -iE 'oidc|openid|error' || true
 exit 1"""
 timeout = 300
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "zammad-responds"
 url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
 service = "zammad"
 poll = { interval = 3, attempts = 60 }
 timeout = 300
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "authelia-via-caddy"
 url = "https://auth.internal:8443"
-[[tests.steps]]
+service = "authelia"
+[[tests.checks]]
 action = "playwright"
 name = "playwright-auth-flow"
 spec = "zammad-auth.spec.ts"

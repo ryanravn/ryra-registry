@@ -1,28 +1,32 @@
 # immich tests — basic install + OIDC browser SSO flow.
 
+# Basic install. Explicit setup: the `add` carries admin-seed env, so it
+# can't be the defaulted `add immich` + `wait`. Checks are live-safe reads.
 [[tests]]
 name = "immich"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "immich"
 env = { INIT_IMMICH_ADMIN_EMAIL = "admin@example.com", INIT_IMMICH_ADMIN_PASSWORD = "testpassword123" }
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "immich"
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "immich-responds"
 url = "http://127.0.0.1:$SERVICE_PORT_HTTP/api/server/ping"
 service = "immich"
 poll = { interval = 5, attempts = 60 }
 timeout = 360
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "data-dir-created"
 run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/immich"
 
 # Full SSO flow via caddy + authelia. Heavy test — immich build takes a
-# while so give it 900s.
+# while so give it 900s. Stays a lifecycle test: the `create-admin` step
+# POSTs to /api/auth/admin-sign-up, which would provision an admin account
+# on a live install — not a safe live check.
 [[tests]]
 name = "oidc"
 browser = true

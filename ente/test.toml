@@ -1,28 +1,24 @@
 # ente tests — install (API + photos web) and SMTP verification-email delivery.
 
+# Basic install: probe the API ping + photos web, assert the data dir is
+# there. Setup is the default add + wait.
 [[tests]]
 name = "ente"
-[[tests.steps]]
-action = "add"
-service = "ente"
-[[tests.steps]]
-action = "wait"
-service = "ente"
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "api-ping"
 url = "http://localhost:$SERVICE_PORT_HTTP/ping"
 service = "ente"
 poll = { interval = 2, attempts = 60 }
 timeout = 150
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "photos-web"
 url = "http://localhost:$SERVICE_PORT_PHOTOS/"
 service = "ente"
 poll = { interval = 2, attempts = 30 }
 timeout = 90
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "data-dir-created"
 run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/ente"
@@ -32,6 +28,7 @@ timeout = 5
 # logs "Skipping sending email"; with --smtp=inbucket it must deliver. Requesting
 # an OTT for any email triggers the send — no account needed. The email subject
 # is "Verification code: <NNNNNN>" (lowercase "code"; match is case-sensitive).
+# Stays a lifecycle test: `mail` reads the inbucket fixture.
 [[tests]]
 name = "smtp"
 [[tests.steps]]

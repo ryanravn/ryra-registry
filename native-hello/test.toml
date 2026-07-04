@@ -2,32 +2,26 @@
 # compile the source, run the binary under systemd --user, serve HTTP, and log
 # visits to the service data dir. This is the only `runtime = "native"` service
 # and exists purely to test that path.
-
+#
+# Basic checks: setup is the default add + wait (the add compiles the binary
+# via cargo build --release; the synthesized 300s add timeout covers it).
 [[tests]]
 name = "native-hello"
-[[tests.steps]]
-action = "add"
-service = "native-hello"
-# First add compiles the binary (cargo build --release).
-timeout = 120
-[[tests.steps]]
-action = "wait"
-service = "native-hello"
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "responds"
 url = "http://127.0.0.1:$SERVICE_PORT_HTTP/"
 service = "native-hello"
 poll = { interval = 1, attempts = 30 }
 timeout = 60
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "says-hello"
 run = """set -e
 . ${RYRA_DATA_DIR:-$HOME/.local/share/services}/native-hello/.env
 curl -s "http://127.0.0.1:$SERVICE_PORT_HTTP/" | grep -q 'hello world'
 """
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "logs-visits"
 run = """set -e
@@ -36,7 +30,7 @@ SVC=${RYRA_DATA_DIR:-$HOME/.local/share/services}/native-hello
 curl -s -H 'X-Probe: ryra-test' "http://127.0.0.1:$SERVICE_PORT_HTTP/" >/dev/null
 grep -q 'X-Probe: ryra-test' "$SVC/data/visits.log"
 """
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "runs-as-unit"
 run = "systemctl --user is-active native-hello | grep -q active"
@@ -44,6 +38,7 @@ run = "systemctl --user is-active native-hello | grep -q active"
 # Inner-loop test: editing the source and running `ryra upgrade` rebuilds from
 # source and reloads the live service. Runs in one step under a trap that always
 # restores the source, so a failed assertion can't leave the registry dirty.
+# Stays a lifecycle test: it edits registry source and runs `ryra upgrade`.
 [[tests]]
 name = "upgrade"
 [[tests.steps]]

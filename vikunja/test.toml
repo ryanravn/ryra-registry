@@ -1,28 +1,24 @@
 # vikunja tests — basic install + SMTP delivery + OIDC browser flow.
 
+# Basic install. Setup is the default add + wait; the checks are live-safe.
 [[tests]]
 name = "vikunja"
-[[tests.steps]]
-action = "add"
-service = "vikunja"
-[[tests.steps]]
-action = "wait"
-service = "vikunja"
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "vikunja-responds"
 url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
 service = "vikunja"
 poll = { interval = 2, attempts = 30 }
 timeout = 90
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "data-dir-created"
 run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/vikunja"
 timeout = 10
 
 # SMTP: register a user — Vikunja's mailer sends a confirmation email
-# on successful registration.
+# on successful registration. Stays a lifecycle test: `mail` reads the
+# inbucket fixture.
 [[tests]]
 name = "smtp"
 [[tests.steps]]
@@ -58,44 +54,44 @@ timeout = 30
 action = "mail"
 name = "mail-delivered-to-inbucket"
 mailbox = "smtptest"
-
-# OIDC browser flow.
 timeout = 90
 
+# OIDC browser flow. Explicit setup: adds carry args/env and there are
+# three services. The login flow is live-safe.
 [[tests]]
 name = "oidc"
 browser = true
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "caddy"
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "caddy"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "authelia"
 args = "--url https://auth.internal:8443"
 env = { AUTHELIA_ADMIN_USER = "testuser", AUTHELIA_ADMIN_PASSWORD = "testpassword123" }
 timeout = 300
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "authelia"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "vikunja"
 args = "--auth"
 timeout = 300
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "vikunja"
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "vikunja-responds"
 url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
 service = "vikunja"
 poll = { interval = 2, attempts = 20 }
 timeout = 60
-[[tests.steps]]
+[[tests.checks]]
 action = "playwright"
 name = "playwright-auth-flow"
 spec = "vikunja-auth.spec.ts"

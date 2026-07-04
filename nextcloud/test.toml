@@ -2,29 +2,30 @@
 #
 # Test names:
 #   - `nextcloud`       (plain install + HTTP probe + occ status check)
-#   - `nextcloud-smtp`  (outbound mail via inbucket, triggered by occ mail:test)
-#   - `nextcloud-oidc`  (user_oidc app + authelia provider registered via occ)
+#   - `nextcloud-smtp`  (outbound mail via inbucket — stays lifecycle)
+#   - `nextcloud-oidc`  (user_oidc app + authelia provider — a check test)
 
 # Plain install. Nextcloud first-boot is slow: DB migrations + app
 # scaffolding can take 2-3 minutes on the test VM, hence the generous
-# timeouts and poll counts below.
+# timeouts and poll counts below. Explicit setup keeps the 900s add
+# timeout (the defaulted bracket would only give 300s).
 [[tests]]
 name = "nextcloud"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "nextcloud"
 timeout = 900
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "nextcloud"
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "nextcloud-responds"
 url = "http://127.0.0.1:$SERVICE_PORT_HTTP/status.php"
 service = "nextcloud"
 poll = { interval = 3, attempts = 80 }
 timeout = 360
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "installed-reports-healthy"
 run = """for i in $(seq 1 80); do
@@ -35,14 +36,15 @@ echo "Nextcloud never reported installed=true"
 podman logs --tail 50 nextcloud 2>&1 || true
 exit 1"""
 timeout = 420
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "data-dir-accessible"
 run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/nextcloud/data"
 
 # SMTP test - create a user with an email address, then fire `occ mail:test`
 # at them. Nextcloud routes that through the configured SMTP (inbucket)
-# and we poll inbucket for delivery.
+# and we poll inbucket for delivery. Stays a lifecycle test: `mail` reads
+# the inbucket fixture, and it creates a user + fires welcome mail.
 [[tests]]
 name = "smtp"
 [[tests.steps]]
@@ -134,39 +136,42 @@ timeout = 150
 # authelia is the IdP. nextcloud gets user_oidc installed and the authelia
 # provider registered via occ (shell assertions), then a Playwright spec
 # actually clicks the SSO button and completes the login round-trip.
+# Explicit setup: adds carry args/env and there are three services. The
+# occ reads + login-flow assertions are all live-safe.
 [[tests]]
 name = "oidc"
 browser = true
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "caddy"
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "caddy"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "authelia"
 args = "--url https://auth.internal:8443"
 env = { AUTHELIA_ADMIN_USER = "testuser", AUTHELIA_ADMIN_PASSWORD = "testpassword123" }
 timeout = 300
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "authelia"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "nextcloud"
 args = "--auth --url https://nextcloud.internal:8443"
 timeout = 900
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "nextcloud"
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "nextcloud-via-caddy"
 url = "https://nextcloud.internal:8443/status.php"
+service = "nextcloud"
 poll = { interval = 5, attempts = 80 }
 timeout = 480
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "user-oidc-installed"
 run = """for i in $(seq 1 80); do
@@ -177,7 +182,7 @@ echo "user_oidc app never appeared"
 podman exec -u www-data nextcloud php occ app:list 2>&1 | head -40 || true
 exit 1"""
 timeout = 420
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "oidc-provider-registered"
 run = """for i in $(seq 1 30); do
@@ -188,7 +193,7 @@ echo "authelia provider never registered"
 podman exec -u www-data nextcloud php occ user_oidc:provider 2>&1 || true
 exit 1"""
 timeout = 180
-[[tests.steps]]
+[[tests.checks]]
 action = "playwright"
 name = "playwright-sso-flow"
 spec = "nextcloud-auth.spec.ts"

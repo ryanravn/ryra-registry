@@ -6,7 +6,8 @@
 
 # SMTP via seahub's `manage.py sendtestemail`. Seafile's Python shim
 # needs PYTHONPATH + several SEAFILE_* env vars that `seahub.sh` would
-# normally set; we recreate them inline.
+# normally set; we recreate them inline. Stays a lifecycle test: `mail`
+# reads the inbucket fixture.
 [[tests]]
 name = "smtp"
 [[tests.steps]]
@@ -68,44 +69,46 @@ action = "mail"
 name = "mail-delivered-to-inbucket"
 mailbox = "smtptest"
 contains = "Test email from"
-
-# OIDC browser flow — seafile goes through caddy over HTTPS.
 timeout = 90
 
+# OIDC browser flow — seafile goes through caddy over HTTPS. Explicit
+# setup: adds carry args/env and there are three services. The login
+# flow is live-safe.
 [[tests]]
 name = "oidc"
 browser = true
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "caddy"
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "caddy"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "authelia"
 args = "--url https://auth.internal:8443"
 env = { AUTHELIA_ADMIN_USER = "testuser", AUTHELIA_ADMIN_PASSWORD = "testpassword123" }
 timeout = 300
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "authelia"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "seafile"
 args = "--auth --url https://seafile.internal:8443"
 env = { INIT_SEAFILE_ADMIN_EMAIL = "admin@example.com", INIT_SEAFILE_ADMIN_PASSWORD = "testpassword123" }
 timeout = 900
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "seafile"
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "seafile-http-ready"
 url = "https://seafile.internal:8443"
+service = "seafile"
 poll = { interval = 5, attempts = 60 }
 timeout = 360
-[[tests.steps]]
+[[tests.checks]]
 action = "playwright"
 name = "playwright-sso"
 spec = "seafile-auth.spec.ts"

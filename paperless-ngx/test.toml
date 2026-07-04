@@ -1,28 +1,24 @@
 # paperless-ngx tests — basic install, SMTP delivery, OIDC browser SSO.
 
+# Basic install. Setup is the default add + wait; the checks are live-safe.
 [[tests]]
 name = "paperless-ngx"
-[[tests.steps]]
-action = "add"
-service = "paperless-ngx"
-[[tests.steps]]
-action = "wait"
-service = "paperless-ngx"
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "paperless-ngx-responds"
 url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
 service = "paperless-ngx"
 poll = { interval = 5, attempts = 60 }
 timeout = 330
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "data-dir-created"
 run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/paperless-ngx"
 timeout = 10
 
 # SMTP via Django's built-in `sendtestemail` management command —
-# exercises the app's full ActionMailer stack.
+# exercises the app's full ActionMailer stack. Stays a lifecycle test:
+# `mail` reads the inbucket fixture.
 [[tests]]
 name = "smtp"
 [[tests.steps]]
@@ -59,39 +55,39 @@ timeout = 60
 action = "mail"
 name = "mail-delivered-to-inbucket"
 mailbox = "smtptest"
-
-# OIDC browser flow.
 timeout = 90
 
+# OIDC browser flow. Explicit setup: adds carry args/env and there are
+# three services. The login flow is live-safe.
 [[tests]]
 name = "oidc"
 browser = true
 ram = 2048
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "caddy"
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "caddy"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "authelia"
 args = "--url https://auth.internal:8443"
 env = { AUTHELIA_ADMIN_USER = "testuser", AUTHELIA_ADMIN_PASSWORD = "testpassword123" }
 timeout = 300
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "authelia"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "paperless-ngx"
 args = "--auth"
 env = { PAPERLESS_ADMIN_USER = "admin", PAPERLESS_ADMIN_PASSWORD = "testpassword123" }
 timeout = 300
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "paperless-ngx"
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 # Mirrors the basic test's window. Paperless's first-boot Django
 # migrations on an empty DB take ~70s; `--auth` adds
@@ -104,7 +100,7 @@ url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
 service = "paperless-ngx"
 poll = { interval = 5, attempts = 60 }
 timeout = 330
-[[tests.steps]]
+[[tests.checks]]
 action = "playwright"
 name = "playwright-auth-flow"
 spec = "paperless-ngx-auth.spec.ts"

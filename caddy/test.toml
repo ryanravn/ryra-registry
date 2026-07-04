@@ -1,18 +1,14 @@
 # caddy tests — install only (no SMTP/auth flavors apply).
-
+#
+# `checks` is the live-runnable flow; setup is the default (add + wait of
+# caddy), so no [[tests.setup]] is written.
 [[tests]]
 name = "caddy"
-[[tests.steps]]
-action = "add"
-service = "caddy"
-[[tests.steps]]
-action = "wait"
-service = "caddy"
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "responds-on-http-port"
 run = ". ${RYRA_DATA_DIR:-$HOME/.local/share/services}/caddy/.env && for i in $(seq 1 10); do CODE=$(curl -so /dev/null -w '%{http_code}' http://127.0.0.1:$SERVICE_PORT_HTTP 2>/dev/null) && echo \"$CODE\" | grep -qE '200|404' && exit 0; sleep 1; done; exit 1"
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "data-dir-created"
 run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/caddy"

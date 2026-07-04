@@ -1,48 +1,46 @@
 # node-exporter tests - install + scrape-through-host-gateway.
 
+# Basic install. Setup is the default add + wait; the metrics endpoint and
+# host-metric presence are live-safe reads.
 [[tests]]
 name = "node-exporter"
-[[tests.steps]]
-action = "add"
-service = "node-exporter"
-[[tests.steps]]
-action = "wait"
-service = "node-exporter"
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "metrics-responds"
 url = "http://127.0.0.1:$SERVICE_PORT_HTTP/metrics"
 service = "node-exporter"
 poll = { interval = 2, attempts = 15 }
 timeout = 60
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "host-metrics-present"
 run = """. ${RYRA_DATA_DIR:-$HOME/.local/share/services}/node-exporter/.env
 curl -s "http://127.0.0.1:$SERVICE_PORT_HTTP/metrics" | grep -q '^node_cpu_seconds_total'"""
 
 # Scrape via prometheus: host-network consumer targets the podman host
-# gateway at the resolved host port instead of container DNS.
+# gateway at the resolved host port instead of container DNS. Explicit
+# setup: two services are installed. The target-file + query checks are
+# live-safe reads.
 [[tests]]
 name = "prometheus"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "prometheus"
 timeout = 300
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "prometheus"
-[[tests.steps]]
+[[tests.setup]]
 action = "add"
 service = "node-exporter"
-[[tests.steps]]
+[[tests.setup]]
 action = "wait"
 service = "node-exporter"
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "target-uses-host-gateway"
 run = "grep -q 'host.containers.internal' ${RYRA_DATA_DIR:-$HOME/.local/share/services}/prometheus/targets/node-exporter.json"
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "prometheus-scrapes-node-exporter"
 run = """. ${RYRA_DATA_DIR:-$HOME/.local/share/services}/prometheus/.env
