@@ -1,0 +1,134 @@
+# Exposure-transition lifecycle test for `ryra config <service>`: the four
+# reconfigure user stories, in one service lifetime.
+#
+#   1. Own proxy (nginx / Cloudflare Tunnel / anything): set a public URL
+#      and touch nothing else — ryra records it, installs no proxy.
+#   2. Managed path: same URL move with --acme installs caddy in Let's
+#      Encrypt mode and tells the user what THEY still own (DNS record,
+#      port forwarding). Real issuance can't happen in a sandbox (no
+#      public DNS / 80/443), so the assertions pin the rendered state and
+#      the guidance text, which is exactly what the CLI owns.
+#   3. Bring-your-own certs (e.g. Cloudflare Origin CA behind
+#      "Full (Strict)"): after caddy exists the CLI points at tls.caddy
+#      instead of clobbering it; the documented hand-edit round-trips and
+#      caddy stays healthy serving the custom pair.
+#   4. Public -> Tailscale -> loopback. The tailscale leg needs a live
+#      tailnet + admin token the sandbox doesn't have, so the test pins
+#      the guardrail (clean, actionable error); the tailnet transition
+#      itself is covered by live runs (`ryra config --tailscale` against
+#      a real box). The loopback leg runs for real, including the caddy
+#      route cleanup.
+#
+# Vikunja for the same reason configure.toml uses it: boots quickly and
+# has no special exposure needs.
+
+[test]
+name = "exposure"
+
+[[steps]]
+action = "add"
+service = "vikunja"
+timeout = 300
+
+[[steps]]
+action = "wait"
+service = "vikunja"
+timeout = 120
+
+# Story 1: public URL with an operator-owned proxy. Non-interactive and no
+# --acme means: record the URL, install nothing, routing is on the user.
+[[steps]]
+action = "shell"
+name = "public-url-external-proxy"
+run = """set -e
+DATA=${RYRA_DATA_DIR:-$HOME/.local/share/services}
+ryra config vikunja --url https://todo.example.com -y
+grep -q '^url = "https://todo.example.com"$' "$DATA/vikunja/metadata.toml"
+# No caddy appeared: the operator said nothing about managed TLS.
+! ryra list | grep -q '^caddy'
+test ! -d "$DATA/caddy"
+"""
+timeout = 120
+
+# Story 2: the managed path. --acme installs caddy in Let's Encrypt mode
+# (anonymous: empty services_tls body), routes the service through it, and
+# prints the DNS + port-forwarding homework.
+[[steps]]
+action = "shell"
+name = "public-url-lets-encrypt-managed"
+run = """set -e
+DATA=${RYRA_DATA_DIR:-$HOME/.local/share/services}
+OUT=$(ryra config vikunja --url https://todo2.example.com --acme -y 2>&1) \
+    || { echo "ryra config --acme failed:"; echo "$OUT"; \
+         systemctl --user status vikunja --no-pager -l || true; \
+         journalctl --user -u vikunja -n 25 --no-pager || true; exit 1; }
+echo "$OUT" | grep -q 'DNS A/AAAA' || { echo "no DNS guidance in:"; echo "$OUT"; exit 1; }
+echo "$OUT" | grep -qi 'forward'
+ryra list | grep -q 'caddy'
+TLS="$DATA/caddy/config/tls.caddy"
+test -f "$TLS"
+# Anonymous LE renders as an empty snippet body.
+test "$(tr -d '[:space:]' <"$TLS")" = '(services_tls){}'
+grep -q 'Service-Source: registry/vikunja' "$DATA/caddy/config/Caddyfile"
+grep -q '^url = "https://todo2.example.com"$' "$DATA/vikunja/metadata.toml"
+"""
+timeout = 600
+
+# Story 3: bring-your-own certificate. With caddy already installed the
+# flags defer to the user-owned tls.caddy (the CLI must say so, not
+# silently ignore them); the documented hand-edit works and caddy stays
+# healthy serving the custom pair. Certs live under caddy's config dir,
+# the one path the container actually sees (/etc/caddy).
+[[steps]]
+action = "shell"
+name = "byo-certificate"
+run = """set -e
+DATA=${RYRA_DATA_DIR:-$HOME/.local/share/services}
+TLS="$DATA/caddy/config/tls.caddy"
+CERTS="$DATA/caddy/config/certs"
+mkdir -p "$CERTS"
+openssl req -x509 -newkey rsa:2048 -nodes -days 2 \
+    -keyout "$CERTS/todo2.key" -out "$CERTS/todo2.crt" \
+    -subj /CN=todo2.example.com 2>/dev/null
+# The flags point at tls.caddy instead of clobbering a live snippet.
+OUT=$(ryra config vikunja --url https://todo2.example.com \
+    --tls-cert "$CERTS/todo2.crt" --tls-key "$CERTS/todo2.key" -y 2>&1)
+echo "$OUT" | grep -q 'tls.caddy'
+# The documented switch: edit tls.caddy (container paths), reload.
+printf '(services_tls) {\\n\\ttls /etc/caddy/certs/todo2.crt /etc/caddy/certs/todo2.key\\n}\\n' > "$TLS"
+systemctl --user restart caddy
+sleep 3
+systemctl --user is-active caddy | grep -qx active
+"""
+timeout = 180
+
+# Story 4a: the tailscale guardrail. No tailnet in the sandbox, so the
+# transition must fail fast with an error that names tailscale — not
+# render half a change.
+[[steps]]
+action = "shell"
+name = "tailscale-guardrail"
+run = """set -e
+DATA=${RYRA_DATA_DIR:-$HOME/.local/share/services}
+if OUT=$(ryra config vikunja --tailscale -y 2>&1); then
+    echo "expected --tailscale to fail without a tailnet"; exit 1
+fi
+echo "$OUT" | grep -qi 'tailscale'
+# And it really was fail-fast: the public URL is untouched.
+grep -q '^url = "https://todo2.example.com"$' "$DATA/vikunja/metadata.toml"
+"""
+timeout = 120
+
+# Story 4b: back to loopback. The URL leaves metadata AND the caddy route
+# is cleaned up — a stale site block would keep proxying a service that
+# says it's local-only.
+[[steps]]
+action = "shell"
+name = "back-to-loopback"
+run = """set -e
+DATA=${RYRA_DATA_DIR:-$HOME/.local/share/services}
+ryra config vikunja --no-url -y
+! grep -q '^url' "$DATA/vikunja/metadata.toml"
+! grep -q 'Service-Source: registry/vikunja' "$DATA/caddy/config/Caddyfile"
+"""
+timeout = 120
