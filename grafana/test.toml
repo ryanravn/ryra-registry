@@ -1,30 +1,30 @@
 # grafana tests - install + SMTP delivery.
 
+# `checks` is the live-runnable flow: it asserts against whatever install it
+# finds (sandbox's fresh one in CI, the real one via `ryra test --live`), so
+# every value comes from the install's own .env — never assume setup flags.
+# Setup is implicit (add + wait of this service); write [[tests.setup]] only
+# when the install needs args. The smtp test below stays a lifecycle test:
+# `mail` reads the inbucket fixture, which live installs don't have.
 [[tests]]
 name = "grafana"
-[[tests.steps]]
-action = "add"
-service = "grafana"
-[[tests.steps]]
-action = "wait"
-service = "grafana"
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "health-responds"
 url = "http://127.0.0.1:$SERVICE_PORT_HTTP/api/health"
 service = "grafana"
 poll = { interval = 2, attempts = 20 }
 timeout = 60
-[[tests.steps]]
+[[tests.checks]]
 action = "http"
 name = "login-page-responds"
 url = "http://127.0.0.1:$SERVICE_PORT_HTTP/login"
 service = "grafana"
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "data-dir-created"
 run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/grafana"
-[[tests.steps]]
+[[tests.checks]]
 action = "shell"
 name = "admin-login-works"
 run = """. ${RYRA_DATA_DIR:-$HOME/.local/share/services}/grafana/.env

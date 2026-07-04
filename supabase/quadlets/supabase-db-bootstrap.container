@@ -1,0 +1,30 @@
+[Unit]
+Description=Supabase external DB bootstrap (init SQL)
+StartLimitIntervalSec=300
+StartLimitBurst=5
+Requires=supabase-network.service
+After=supabase-network.service
+
+[Container]
+ContainerName=supabase-db-bootstrap
+Image=docker.io/supabase/postgres:15.8.1.085
+Network=supabase.network
+Volume=${SERVICE_HOME}/configs:/configs:ro,z
+# jwt.sql reads $JWT_EXP; the app's GOTRUE_JWT_EXP is a separate var, so set
+# the cluster-level value the bundled image would otherwise default.
+Environment=JWT_EXP=3600
+Entrypoint=/bin/bash
+Exec=/configs/scripts/db-bootstrap.sh
+Pull=missing
+EnvironmentFile=%h/.local/share/services/supabase/.env
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Restart=on-failure
+RestartSec=5
+EnvironmentFile=%h/.local/share/services/supabase/.env
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target
