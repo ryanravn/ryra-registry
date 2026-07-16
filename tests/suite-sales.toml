@@ -1,0 +1,42 @@
+# The sales suite, both modes from one definition. Sandbox/VM: the setup
+# bracket is the real `ryra suite add sales` (SSO via authelia for zammad,
+# SMTP via the configured relay, bundled databases) plus a wait per member.
+# Live: the checks below run against the real installs.
+#
+# RAM: zammad alone recommends 6 GB (Rails + Elasticsearch + Postgres), so
+# this test needs a big VM and does not fit small hosts; the suite's own
+# batch verdict warns users about exactly that.
+[[tests]]
+name = "suite-sales"
+ram = 8192
+suite = "sales"
+
+[[tests.checks]]
+action = "http"
+name = "twenty-responds"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
+service = "twenty"
+poll = { interval = 5, attempts = 60 }
+timeout = 300
+
+[[tests.checks]]
+action = "http"
+name = "docuseal-responds"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
+service = "docuseal"
+poll = { interval = 2, attempts = 45 }
+timeout = 120
+
+[[tests.checks]]
+action = "shell"
+name = "docuseal-sqlite-initialised"
+run = "test -s ${RYRA_DATA_DIR:-$HOME/.local/share/services}/docuseal/data/docuseal/db.sqlite3"
+timeout = 30
+
+[[tests.checks]]
+action = "http"
+name = "zammad-responds"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
+service = "zammad"
+poll = { interval = 5, attempts = 90 }
+timeout = 600

@@ -1,0 +1,15 @@
+[suite]
+name = "monitoring"
+description = "Metrics, dashboards, and uptime checks: prometheus and grafana wire together automatically"
+
+[[members]]
+service = "prometheus"
+
+[[members]]
+service = "grafana"
+
+[[members]]
+service = "node-exporter"
+
+[[members]]
+service = "uptime-kuma"

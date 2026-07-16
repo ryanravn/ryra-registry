@@ -1,0 +1,17 @@
+[suite]
+name = "sales"
+description = "CRM, e-signatures, and helpdesk: twenty, docuseal, and zammad, with SSO and mail wired where supported"
+
+[defaults]
+auth = true
+smtp = true
+backup = true
+
+[[members]]
+service = "twenty"
+
+[[members]]
+service = "docuseal"
+
+[[members]]
+service = "zammad"

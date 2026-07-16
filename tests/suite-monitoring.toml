@@ -1,0 +1,80 @@
+# The monitoring suite, both modes from one definition. Sandbox/VM: the
+# setup bracket is the real `ryra suite add monitoring` (exercising the suite
+# install path itself) plus a wait per member. Live (`ryra test --live`): the
+# checks below run against the real installs, nothing installed or removed.
+[[tests]]
+name = "suite-monitoring"
+ram = 2048
+suite = "monitoring"
+
+# The capability wiring the suite promises: grafana and node-exporter each
+# get a file_sd scrape target in prometheus, prometheus actually scrapes
+# grafana, and grafana gets a provisioned prometheus datasource.
+[[tests.checks]]
+action = "shell"
+name = "scrape-targets-written"
+run = """test -f ${RYRA_DATA_DIR:-$HOME/.local/share/services}/prometheus/targets/grafana.json \
+&& test -f ${RYRA_DATA_DIR:-$HOME/.local/share/services}/prometheus/targets/node-exporter.json"""
+
+[[tests.checks]]
+action = "http"
+name = "prometheus-healthy"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP/-/healthy"
+service = "prometheus"
+poll = { interval = 2, attempts = 20 }
+timeout = 60
+
+[[tests.checks]]
+action = "shell"
+name = "prometheus-scrapes-grafana"
+run = """. ${RYRA_DATA_DIR:-$HOME/.local/share/services}/prometheus/.env
+for i in $(seq 1 30); do
+  curl -s "http://127.0.0.1:$SERVICE_PORT_HTTP/api/v1/targets" \
+    | grep -q '"service":"grafana".*"health":"up"\\|"health":"up".*"service":"grafana"' && exit 0
+  sleep 3
+done
+echo "grafana target never up: $(curl -s http://127.0.0.1:$SERVICE_PORT_HTTP/api/v1/targets)"
+exit 1"""
+timeout = 120
+
+[[tests.checks]]
+action = "shell"
+name = "grafana-datasource-provisioned"
+run = """. ${RYRA_DATA_DIR:-$HOME/.local/share/services}/grafana/.env
+for i in $(seq 1 10); do
+  curl -sf -u "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD" \
+    "http://127.0.0.1:$SERVICE_PORT_HTTP/api/datasources" | grep -q '"type":"prometheus"' && exit 0
+  sleep 3
+done
+exit 1"""
+timeout = 60
+
+[[tests.checks]]
+action = "http"
+name = "uptime-kuma-responds"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
+service = "uptime-kuma"
+poll = { interval = 2, attempts = 20 }
+timeout = 60
+
+# Idempotency is a lifecycle concern (it invokes the installer and asserts
+# CLI behavior, not live state): re-running the same suite add with all
+# members installed must exit 0 and say there is nothing to do; that's the
+# resume story after a partial failure.
+[[tests]]
+name = "suite-monitoring-idempotent"
+ram = 2048
+
+[[tests.steps]]
+action = "add_suite"
+suite = "monitoring"
+
+[[tests.steps]]
+action = "wait"
+service = "prometheus"
+
+[[tests.steps]]
+action = "shell"
+name = "re-run-is-a-noop"
+run = "ryra suite add monitoring --yes | grep -q 'nothing to do'"
+timeout = 60
