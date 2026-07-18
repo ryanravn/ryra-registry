@@ -43,3 +43,6 @@ length = 32
 [integrations]
 auth = []
 smtp = false
+
+[capabilities]
+provides = ["object-storage"]

@@ -36,12 +36,6 @@ name = "smtp"
 ram = 4608
 [[tests.steps]]
 action = "add"
-service = "caddy"
-[[tests.steps]]
-action = "wait"
-service = "caddy"
-[[tests.steps]]
-action = "add"
 service = "supabase"
 args = "--smtp=inbucket"
 timeout = 1200

@@ -25,12 +25,6 @@ timeout = 30
 name = "smtp"
 [[tests.steps]]
 action = "add"
-service = "caddy"
-[[tests.steps]]
-action = "wait"
-service = "caddy"
-[[tests.steps]]
-action = "add"
 service = "docuseal"
 args = "--smtp=inbucket"
 timeout = 300

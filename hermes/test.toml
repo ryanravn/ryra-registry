@@ -15,14 +15,17 @@ timeout = 180
 [[tests.checks]]
 action = "shell"
 name = "api-key-enforced"
-# Shell checks don't get SERVICE_PORT_* injected; source the service env.
-run = ". ${RYRA_DATA_DIR:-$HOME/.local/share/services}/hermes/.env; test \"$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:$SERVICE_PORT_HTTP/v1/models)\" = 401"
+# service = sources hermes's .env (ports, generated key) framework-side,
+# so the command is identical in sandboxed and live runs.
+service = "hermes"
+run = "test \"$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:$SERVICE_PORT_HTTP/v1/models)\" = 401"
 [[tests.checks]]
 action = "shell"
 name = "api-key-accepted"
 # The generated key must actually open the door, not just its absence
 # close it: /v1/models with the key from .env answers 2xx.
-run = ". ${RYRA_DATA_DIR:-$HOME/.local/share/services}/hermes/.env; c=$(curl -s -o /dev/null -w '%{http_code}' -H \"Authorization: Bearer $API_SERVER_KEY\" http://127.0.0.1:$SERVICE_PORT_HTTP/v1/models); case $c in 2*) exit 0;; *) echo \"got $c\" >&2; exit 1;; esac"
+service = "hermes"
+run = "c=$(curl -s -o /dev/null -w '%{http_code}' -H \"Authorization: Bearer $API_SERVER_KEY\" http://127.0.0.1:$SERVICE_PORT_HTTP/v1/models); case $c in 2*) exit 0;; *) echo \"got $c\" >&2; exit 1;; esac"
 [[tests.checks]]
 action = "shell"
 name = "data-dir-created"
