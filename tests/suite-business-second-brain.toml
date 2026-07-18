@@ -4,7 +4,7 @@
 # against the real installs, nothing installed or removed.
 [[tests]]
 name = "suite-business-second-brain"
-ram = 6144
+ram = 7168
 suite = "business-second-brain"
 
 [[tests.checks]]
@@ -30,3 +30,11 @@ url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
 service = "twenty"
 poll = { interval = 5, attempts = 60 }
 timeout = 300
+
+[[tests.checks]]
+action = "http"
+name = "element-responds"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
+service = "synapse"
+poll = { interval = 2, attempts = 45 }
+timeout = 120
