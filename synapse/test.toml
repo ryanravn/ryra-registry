@@ -43,7 +43,7 @@ timeout = 10
 # advertises OIDC in its login flows. Explicit setup: adds carry args/env
 # and there are three services. The login flow is live-safe.
 [[tests]]
-name = "oidc"
+name = "synapse-oidc"
 browser = true
 [[tests.setup]]
 action = "add"

@@ -4,6 +4,7 @@
 # db landed (proof Rails migrations ran). Setup is the default add + wait.
 [[tests]]
 name = "docuseal"
+services = ["docuseal"]
 [[tests.checks]]
 action = "http"
 name = "docuseal-responds"
@@ -22,7 +23,7 @@ timeout = 30
 # STARTTLS is force-disabled because inbucket is plain SMTP. Stays a
 # lifecycle test: `mail` reads the inbucket fixture.
 [[tests]]
-name = "smtp"
+name = "docuseal-smtp"
 [[tests.steps]]
 action = "add"
 service = "docuseal"

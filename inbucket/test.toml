@@ -5,6 +5,7 @@
 
 [[tests]]
 name = "inbucket"
+services = ["inbucket"]
 [[tests.checks]]
 action = "http"
 name = "web-ui-responds"

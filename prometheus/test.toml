@@ -2,6 +2,7 @@
 
 [[tests]]
 name = "prometheus"
+services = ["prometheus"]
 [[tests.checks]]
 action = "http"
 name = "healthy-endpoint"

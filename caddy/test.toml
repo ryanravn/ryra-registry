@@ -4,6 +4,7 @@
 # caddy), so no [[tests.setup]] is written.
 [[tests]]
 name = "caddy"
+services = ["caddy"]
 [[tests.checks]]
 action = "shell"
 name = "responds-on-http-port"

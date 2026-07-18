@@ -8,6 +8,7 @@
 # `mail` reads the inbucket fixture, which live installs don't have.
 [[tests]]
 name = "grafana"
+services = ["grafana"]
 [[tests.checks]]
 action = "http"
 name = "health-responds"
@@ -34,7 +35,7 @@ curl -sf -u "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD" \
 # Mail delivery: grafana's forgot-password flow sends a reset link to the
 # admin user's email (admin@example.com -> inbucket mailbox "admin").
 [[tests]]
-name = "smtp"
+name = "grafana-smtp"
 [[tests.steps]]
 action = "add"
 service = "grafana"

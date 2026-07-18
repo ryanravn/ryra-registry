@@ -3,6 +3,7 @@
 # Basic install. Setup is the default add + wait; the checks are live-safe.
 [[tests]]
 name = "vikunja"
+services = ["vikunja"]
 [[tests.checks]]
 action = "http"
 name = "vikunja-responds"
@@ -20,7 +21,7 @@ timeout = 10
 # on successful registration. Stays a lifecycle test: `mail` reads the
 # inbucket fixture.
 [[tests]]
-name = "smtp"
+name = "vikunja-smtp"
 [[tests.steps]]
 action = "add"
 service = "caddy"
@@ -59,7 +60,7 @@ timeout = 90
 # OIDC browser flow. Explicit setup: adds carry args/env and there are
 # three services. The login flow is live-safe.
 [[tests]]
-name = "oidc"
+name = "vikunja-oidc"
 browser = true
 [[tests.setup]]
 action = "add"

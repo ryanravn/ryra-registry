@@ -35,7 +35,7 @@ run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/authelia"
 # poll inbucket until the mail arrives for the admin account. Stays a
 # lifecycle test: `mail` reads the inbucket fixture.
 [[tests]]
-name = "smtp"
+name = "authelia-smtp"
 [[tests.steps]]
 action = "add"
 service = "caddy"

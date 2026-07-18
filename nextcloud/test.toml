@@ -46,7 +46,7 @@ run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/nextcloud/data"
 # and we poll inbucket for delivery. Stays a lifecycle test: `mail` reads
 # the inbucket fixture, and it creates a user + fires welcome mail.
 [[tests]]
-name = "smtp"
+name = "nextcloud-smtp"
 [[tests.steps]]
 action = "add"
 service = "caddy"
@@ -139,7 +139,7 @@ timeout = 150
 # Explicit setup: adds carry args/env and there are three services. The
 # occ reads + login-flow assertions are all live-safe.
 [[tests]]
-name = "oidc"
+name = "nextcloud-oidc"
 browser = true
 [[tests.setup]]
 action = "add"

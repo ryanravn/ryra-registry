@@ -50,7 +50,7 @@ timeout = 300
 # Explicit setup: adds carry args/env and there are three services. The
 # rails-read + login-flow assertions are all live-safe.
 [[tests]]
-name = "oidc"
+name = "zammad-oidc"
 browser = true
 [[tests.setup]]
 action = "add"

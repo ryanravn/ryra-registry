@@ -10,6 +10,7 @@
 # to the host (it should be pod-internal). Setup is the default add + wait.
 [[tests]]
 name = "forgejo"
+services = ["forgejo"]
 [[tests.checks]]
 action = "http"
 name = "forgejo-responds"
@@ -33,7 +34,7 @@ run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/forgejo"
 # API until the message shows up in the target mailbox. Stays a lifecycle
 # test: `mail` reads the inbucket fixture.
 [[tests]]
-name = "smtp"
+name = "forgejo-smtp"
 [[tests.steps]]
 action = "add"
 service = "caddy"
@@ -88,7 +89,7 @@ timeout = 90
 # Explicit setup: the adds carry args/env and there are three services.
 # The login-flow assertions are all live-safe reads.
 [[tests]]
-name = "oidc"
+name = "forgejo-oidc"
 browser = true
 [[tests.setup]]
 action = "add"

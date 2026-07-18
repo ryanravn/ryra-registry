@@ -56,7 +56,7 @@ run = "grep -q 'SMTP_FROM=noreply@example.com' ${RYRA_DATA_DIR:-$HOME/.local/sha
 # SMTP delivery via vaultwarden's /admin/test/smtp endpoint. ADMIN_TOKEN
 # is set so /admin becomes reachable — otherwise vaultwarden hides it.
 [[tests]]
-name = "smtp"
+name = "vaultwarden-smtp"
 [[tests.steps]]
 action = "add"
 service = "caddy"

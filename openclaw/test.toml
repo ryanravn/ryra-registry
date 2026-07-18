@@ -2,6 +2,7 @@
 
 [[tests]]
 name = "openclaw"
+services = ["openclaw"]
 [[tests.checks]]
 action = "http"
 name = "http-responds"

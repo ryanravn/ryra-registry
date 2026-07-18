@@ -3,6 +3,7 @@
 # Basic install. Setup is the default add + wait; the checks are live-safe.
 [[tests]]
 name = "paperless-ngx"
+services = ["paperless-ngx"]
 [[tests.checks]]
 action = "http"
 name = "paperless-ngx-responds"
@@ -20,7 +21,7 @@ timeout = 10
 # exercises the app's full ActionMailer stack. Stays a lifecycle test:
 # `mail` reads the inbucket fixture.
 [[tests]]
-name = "smtp"
+name = "paperless-ngx-smtp"
 [[tests.steps]]
 action = "add"
 service = "caddy"
@@ -60,7 +61,7 @@ timeout = 90
 # OIDC browser flow. Explicit setup: adds carry args/env and there are
 # three services. The login flow is live-safe.
 [[tests]]
-name = "oidc"
+name = "paperless-ngx-oidc"
 browser = true
 ram = 2048
 [[tests.setup]]

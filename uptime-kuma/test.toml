@@ -2,6 +2,7 @@
 
 [[tests]]
 name = "uptime-kuma"
+services = ["uptime-kuma"]
 [[tests.checks]]
 action = "http"
 name = "http-responds"

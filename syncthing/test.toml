@@ -3,6 +3,7 @@
 
 [[tests]]
 name = "syncthing"
+services = ["syncthing"]
 [[tests.checks]]
 action = "http"
 name = "gui-responds"

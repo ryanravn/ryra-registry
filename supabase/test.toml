@@ -32,7 +32,7 @@ timeout = 30
 # SMTP via GoTrue's recovery email endpoint. Heavy stack — requires ~4.5 GB
 # RAM for postgres + kong + gotrue + rest + realtime + storage + studio + meta.
 [[tests]]
-name = "smtp"
+name = "supabase-smtp"
 ram = 4608
 [[tests.steps]]
 action = "add"
@@ -86,7 +86,7 @@ timeout = 120
 # end-to-end catches half-broken implementations where only one
 # half got snapshotted.
 [[tests]]
-name = "backup"
+name = "supabase-backup"
 ram = 4608
 [[tests.steps]]
 action = "shell"
@@ -307,7 +307,7 @@ timeout = 30
 # MinIO, the bucket is auto-created, and an uploaded object actually lands in the
 # MinIO bucket — proving the S3 backend is really wired, not just "healthy".
 [[tests]]
-name = "s3"
+name = "supabase-s3"
 ram = 4608
 [[tests.steps]]
 action = "add"

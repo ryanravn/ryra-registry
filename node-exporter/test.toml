@@ -4,6 +4,7 @@
 # host-metric presence are live-safe reads.
 [[tests]]
 name = "node-exporter"
+services = ["node-exporter"]
 [[tests.checks]]
 action = "http"
 name = "metrics-responds"
@@ -22,7 +23,7 @@ curl -s "http://127.0.0.1:$SERVICE_PORT_HTTP/metrics" | grep -q '^node_cpu_secon
 # setup: two services are installed. The target-file + query checks are
 # live-safe reads.
 [[tests]]
-name = "prometheus"
+name = "node-exporter-prometheus"
 [[tests.setup]]
 action = "add"
 service = "prometheus"

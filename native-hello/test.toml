@@ -7,6 +7,7 @@
 # via cargo build --release; the synthesized 300s add timeout covers it).
 [[tests]]
 name = "native-hello"
+services = ["native-hello"]
 [[tests.checks]]
 action = "http"
 name = "responds"
@@ -40,7 +41,7 @@ run = "systemctl --user is-active native-hello | grep -q active"
 # restores the source, so a failed assertion can't leave the registry dirty.
 # Stays a lifecycle test: it edits registry source and runs `ryra upgrade`.
 [[tests]]
-name = "upgrade"
+name = "native-hello-upgrade"
 [[tests.steps]]
 action = "add"
 service = "native-hello"

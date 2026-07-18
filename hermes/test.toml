@@ -4,6 +4,7 @@
 
 [[tests]]
 name = "hermes"
+services = ["hermes"]
 ram = 2048
 [[tests.checks]]
 action = "http"

@@ -4,6 +4,7 @@
 # there. Setup is the default add + wait.
 [[tests]]
 name = "ente"
+services = ["ente"]
 [[tests.checks]]
 action = "http"
 name = "api-ping"
@@ -30,7 +31,7 @@ timeout = 5
 # is "Verification code: <NNNNNN>" (lowercase "code"; match is case-sensitive).
 # Stays a lifecycle test: `mail` reads the inbucket fixture.
 [[tests]]
-name = "smtp"
+name = "ente-smtp"
 [[tests.steps]]
 action = "add"
 service = "ente"

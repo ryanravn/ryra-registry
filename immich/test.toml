@@ -28,7 +28,7 @@ run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/immich"
 # POSTs to /api/auth/admin-sign-up, which would provision an admin account
 # on a live install — not a safe live check.
 [[tests]]
-name = "oidc"
+name = "immich-oidc"
 browser = true
 [[tests.steps]]
 action = "add"

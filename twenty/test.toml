@@ -42,7 +42,7 @@ run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/twenty"
 # → twenty-worker → SMTP. Stays a lifecycle test: `mail` reads the
 # inbucket fixture.
 [[tests]]
-name = "smtp"
+name = "twenty-smtp"
 browser = true
 [[tests.steps]]
 action = "add"

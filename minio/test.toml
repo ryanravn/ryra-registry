@@ -4,6 +4,7 @@
 
 [[tests]]
 name = "minio"
+services = ["minio"]
 [[tests.checks]]
 action = "http"
 name = "health-live"
