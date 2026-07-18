@@ -1,0 +1,70 @@
+# Hermes Agent (Nous Research): a self-hosted AI agent with persistent
+# memory, learned skills, and an OpenAI-compatible gateway. The box becomes
+# the agent's always-on home. Everything it knows (sessions, vector memory,
+# skills, config, encrypted secrets) lives in one data dir, so backup
+# covers the whole brain.
+#
+# v1 is gateway-only: this image's dashboard refuses non-loopback binds
+# unless an auth provider is registered in its config.yaml (a password
+# HASH, no env-var path), which ryra cannot render at install time. Enable
+# it post-install per upstream docs (`hermes dashboard register`, or
+# dashboard.basic_auth in data/config.yaml) if you want the web UI.
+
+[service]
+name = "hermes"
+description = "Hermes Agent: self-hosted AI agent with persistent memory, learned skills, and an OpenAI-compatible gateway"
+category = "automation"
+tags = ["ai", "agent", "assistant", "memory"]
+url = "https://hermes-agent.nousresearch.com/"
+architecture = ["amd64", "arm64"]
+# Loopback default. The gateway dispatches terminal-capable agent work, so
+# treat the port like ssh: reach it over the tailnet or a tunnel; any real
+# exposure carries https by construction and the generated key gates it.
+https = "never"
+
+[requirements.ram]
+min = 2048
+recommended = 4096
+
+# The OpenAI-compatible gateway; /health answers unauthenticated, all
+# real endpoints require the API key.
+[[ports]]
+name = "http"
+container_port = 8642
+tailscale_https = 443
+
+[[env]]
+name = "API_SERVER_ENABLED"
+value = "true"
+
+[[env]]
+name = "API_SERVER_HOST"
+value = "0.0.0.0"
+
+# The gateway refuses keys shorter than 16 chars; ryra's generated
+# secrets are 32-char alphanumeric.
+[[env]]
+name = "API_SERVER_KEY"
+value = "{{secret.api_key}}"
+
+# Model access. Either or both; can also be configured later in the
+# mounted data dir, so empty is a valid install.
+[[env]]
+name = "ANTHROPIC_API_KEY"
+value = ""
+kind = "prompted"
+prompt = "Anthropic API key (empty to configure later)"
+
+[[env]]
+name = "OPENAI_API_KEY"
+value = ""
+kind = "prompted"
+prompt = "OpenAI API key (empty to configure later)"
+
+[integrations]
+backup = true
+
+# /opt/data mounts at data/: sessions, vector memory, learned skills,
+# encrypted secrets, config. One folder = the entire agent.
+[backup]
+paths = ["data"]

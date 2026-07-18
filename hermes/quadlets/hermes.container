@@ -1,0 +1,26 @@
+[Unit]
+Description=Hermes Agent
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Container]
+ContainerName=hermes
+Image=docker.io/nousresearch/hermes-agent:v2026.7.7.2
+Exec=gateway run
+PublishPort=${SERVICE_PORT_HTTP}:8642
+Volume=${SERVICE_HOME}/data:/opt/data:Z,U
+Pull=missing
+EnvironmentFile=%h/.local/share/services/hermes/.env
+# Browser tools (playwright/chromium) want real shared memory.
+ShmSize=1g
+HealthCmd=curl -sf http://127.0.0.1:8642/health || exit 1
+
+[Service]
+EnvironmentFile=%h/.local/share/services/hermes/.env
+Restart=always
+RestartSec=5
+# Big image (bundled browser); first pull + first boot take a while.
+TimeoutStartSec=600
+
+[Install]
+WantedBy=default.target

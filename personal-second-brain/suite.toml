@@ -1,0 +1,18 @@
+[suite]
+name = "personal-second-brain"
+description = "Your external memory, private-first: syncthing feeds the box plain files from every device (AI-editable on disk), paperless-ngx archives and OCRs documents, vikunja tracks tasks, and hermes is the agent that remembers"
+
+[defaults]
+backup = true
+
+[[members]]
+service = "syncthing"
+
+[[members]]
+service = "paperless-ngx"
+
+[[members]]
+service = "vikunja"
+
+[[members]]
+service = "hermes"

@@ -1,0 +1,23 @@
+# hermes tests: install only, no model keys (an empty-key install is
+# valid). /health is the unauthenticated aliveness signal; real endpoints
+# require the generated API key, which the 401 check proves is enforced.
+
+[[tests]]
+name = "hermes"
+ram = 2048
+[[tests.checks]]
+action = "http"
+name = "gateway-healthy"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP/health"
+service = "hermes"
+poll = { interval = 3, attempts = 40 }
+timeout = 180
+[[tests.checks]]
+action = "shell"
+name = "api-key-enforced"
+# Shell checks don't get SERVICE_PORT_* injected; source the service env.
+run = ". ${RYRA_DATA_DIR:-$HOME/.local/share/services}/hermes/.env; test \"$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:$SERVICE_PORT_HTTP/v1/models)\" = 401"
+[[tests.checks]]
+action = "shell"
+name = "data-dir-created"
+run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/hermes/data"

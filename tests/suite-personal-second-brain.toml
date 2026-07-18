@@ -1,0 +1,40 @@
+# The personal second-brain suite, both modes from one definition.
+# Sandbox/VM: the setup bracket is the real `ryra suite add
+# personal-second-brain` plus a wait per member. Live: the checks run
+# against the real installs, nothing installed or removed.
+[[tests]]
+name = "suite-personal-second-brain"
+ram = 6144
+suite = "personal-second-brain"
+
+[[tests.checks]]
+action = "http"
+name = "syncthing-responds"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP/rest/noauth/health"
+service = "syncthing"
+poll = { interval = 2, attempts = 30 }
+timeout = 90
+
+[[tests.checks]]
+action = "http"
+name = "paperless-responds"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
+service = "paperless-ngx"
+poll = { interval = 3, attempts = 40 }
+timeout = 180
+
+[[tests.checks]]
+action = "http"
+name = "vikunja-responds"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP/api/v1/info"
+service = "vikunja"
+poll = { interval = 2, attempts = 30 }
+timeout = 90
+
+[[tests.checks]]
+action = "http"
+name = "hermes-gateway-healthy"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP/health"
+service = "hermes"
+poll = { interval = 3, attempts = 40 }
+timeout = 180

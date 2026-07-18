@@ -1,0 +1,20 @@
+[suite]
+name = "business-second-brain"
+description = "The team's external memory: seafile holds the library with real permissions and sharing, paperless-ngx archives and OCRs documents, vikunja tracks the work, and hermes is the agent that remembers; SSO and mail wired where supported"
+
+[defaults]
+auth = true
+smtp = true
+backup = true
+
+[[members]]
+service = "seafile"
+
+[[members]]
+service = "paperless-ngx"
+
+[[members]]
+service = "vikunja"
+
+[[members]]
+service = "hermes"
