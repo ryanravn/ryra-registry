@@ -1,9 +1,9 @@
 [suite]
 name = "personal-second-brain"
-description = "Your external memory: seafile holds your libraries (per-device selective sync, web editing, share links; encrypted libraries stay yours alone), paperless-ngx archives and OCRs documents, vikunja tracks tasks, and hermes is the agent that remembers"
+description = "Your external memory: seafile holds your libraries (per-device selective sync, web editing, share links; encrypted libraries stay yours alone), paperless-ngx archives and OCRs documents, and hermes is the agent that remembers"
 
 [defaults]
-# SSO where members support it (paperless-ngx, vikunja); seafile's own
+# SSO where members support it (paperless-ngx); seafile's own
 # accounts stay primary for sync clients, hermes keeps its API key.
 auth = true
 backup = true
@@ -13,9 +13,6 @@ service = "seafile"
 
 [[members]]
 service = "paperless-ngx"
-
-[[members]]
-service = "vikunja"
 
 [[members]]
 service = "hermes"

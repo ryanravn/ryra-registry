@@ -25,14 +25,6 @@ timeout = 180
 
 [[tests.checks]]
 action = "http"
-name = "vikunja-responds"
-url = "http://127.0.0.1:$SERVICE_PORT_HTTP/api/v1/info"
-service = "vikunja"
-poll = { interval = 2, attempts = 30 }
-timeout = 90
-
-[[tests.checks]]
-action = "http"
 name = "hermes-gateway-healthy"
 url = "http://127.0.0.1:$SERVICE_PORT_HTTP/health"
 service = "hermes"
