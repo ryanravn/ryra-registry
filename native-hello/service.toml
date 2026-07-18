@@ -27,3 +27,11 @@ container_port = 3000
 # is runtime-agnostic: a native service backs up and restores like any other.
 [integrations]
 backup = true
+
+# The build assumes a Rust toolchain on the box; say so instead of failing
+# halfway through `cargo build`. Arch ships cargo inside `rust`.
+[requirements.ram]
+min = 64
+
+[requirements.system]
+packages = [{ command = "cargo", package = "cargo", pacman = "rust" }]
