@@ -1,0 +1,58 @@
+# The manifest's one promise, end to end: a hand-edited rendered file is
+# DRIFT — `ryra upgrade` refuses to touch it without --force, and with
+# --force it re-renders and the manifest verifies again with the stock
+# GNU tool. Runs against the current registry (drift classification does
+# not need an older ref: on-disk differing from both manifest and planned
+# render is drift regardless).
+
+[[tests]]
+name = "upgrade-drift"
+ram = 512
+[[tests.setup]]
+action = "add"
+service = "uptime-kuma"
+[[tests.setup]]
+action = "wait"
+service = "uptime-kuma"
+
+[[tests.checks]]
+action = "shell"
+name = "hand-edit-is-drift-upgrade-refuses"
+timeout = 120
+run = '''
+set -e
+D=${RYRA_DATA_DIR:-$HOME/.local/share/services}
+Q=$D/uptime-kuma/uptime-kuma.container
+printf "\n# operator tweak: keep me\n" >> "$Q"
+if out=$(ryra upgrade uptime-kuma --yes 2>&1); then
+  echo "upgrade should have refused over drift but succeeded:" >&2
+  echo "$out" >&2
+  exit 1
+fi
+case "$out" in *drift*|*Drift*|*force*) ;; *) echo "refusal did not mention drift/--force: $out" >&2; exit 1;; esac
+grep -q "operator tweak: keep me" "$Q"
+'''
+
+[[tests.checks]]
+action = "shell"
+name = "force-rerenders-and-manifest-verifies"
+timeout = 180
+run = '''
+set -e
+D=${RYRA_DATA_DIR:-$HOME/.local/share/services}
+Q=$D/uptime-kuma/uptime-kuma.container
+ryra upgrade uptime-kuma --yes --force
+if grep -q "operator tweak: keep me" "$Q"; then
+  echo "--force did not re-render the drifted file" >&2
+  exit 1
+fi
+cd $D/uptime-kuma && sha256sum -c service.manifest --quiet
+'''
+
+[[tests.checks]]
+action = "http"
+name = "service-healthy-after-forced-upgrade"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
+service = "uptime-kuma"
+poll = { interval = 2, attempts = 30 }
+timeout = 90
