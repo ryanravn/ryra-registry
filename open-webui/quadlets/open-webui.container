@@ -16,8 +16,9 @@ HealthCmd=curl -sf http://localhost:8080/ || exit 1
 
 [Service]
 EnvironmentFile=%h/.local/share/services/open-webui/.env
-ExecStartPre=/bin/bash ${SERVICE_HOME}/configs/scripts/merge-ca-bundle.sh
-ExecStartPost=/bin/bash -c "podman cp ${SERVICE_HOME}/ca-bundle.crt open-webui:/usr/local/lib/python3.11/site-packages/certifi/cacert.pem 2>/dev/null || true"
+# CA trust for --auth installs; best-effort, sandbox-safe (SERVICE_HOME
+# passed through), reads certifi's real path from the running container.
+ExecStartPost=-/bin/bash ${SERVICE_HOME}/configs/scripts/merge-ca-bundle.sh ${SERVICE_HOME}
 Restart=always
 RestartSec=5
 TimeoutStartSec=300

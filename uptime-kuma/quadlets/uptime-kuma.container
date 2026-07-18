@@ -5,7 +5,7 @@ StartLimitBurst=3
 
 [Container]
 ContainerName=uptime-kuma
-Image=docker.io/louislam/uptime-kuma:1
+Image=docker.io/louislam/uptime-kuma:1.23.17
 AutoUpdate=registry
 PublishPort=${SERVICE_PORT_HTTP}:3001
 Volume=${SERVICE_HOME}/data:/app/data:Z,U

@@ -6,7 +6,7 @@ Requires=forgejo-postgres.service
 After=forgejo-postgres.service
 
 [Container]
-Image=codeberg.org/forgejo/forgejo:11
+Image=codeberg.org/forgejo/forgejo:11.0.16
 AutoUpdate=registry
 ContainerName=forgejo
 Network=forgejo.network

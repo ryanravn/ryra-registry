@@ -29,4 +29,4 @@ paths = ["data"]
 [autoupdate]
 strategy = "github-release"
 repo = "louislam/uptime-kuma"
-tag_regex = '^(\d+)\.\d+\.\d+$'
+tag_regex = '^(1\.\d+\.\d+)$'
