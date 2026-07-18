@@ -1,0 +1,89 @@
+# The business suite working together as ONE, not per-member health
+# (tests/suite-business-second-brain.toml covers that): a file uploaded to
+# seafile comes out searchable in paperless, and a box failure lands in the
+# team's own Matrix room via `ryra notify --matrix`.
+#
+# Cross-check state rides /tmp/brainflow-* files; consume-dir writes go
+# through `podman exec` because the :U volume belongs to the container's
+# mapped uid.
+[[tests]]
+name = "business-brain-flow"
+ram = 6144
+suite = "business-second-brain"
+
+[[tests.checks]]
+action = "shell"
+name = "seafile-accepts-upload"
+timeout = 120
+run = '''
+set -e
+D=${RYRA_DATA_DIR:-$HOME/.local/share/services}
+. $D/seafile/.env
+SF=http://127.0.0.1:$SERVICE_PORT_HTTP
+TOK=$(curl -sf -d "username=$INIT_SEAFILE_ADMIN_EMAIL" -d "password=$INIT_SEAFILE_ADMIN_PASSWORD" $SF/api2/auth-token/ | python3 -c "import json,sys; print(json.load(sys.stdin)[\"token\"])")
+REPO=$(curl -sf -X POST -H "Authorization: Token $TOK" -d "name=brain-inbox" $SF/api2/repos/ | python3 -c "import json,sys; print(json.load(sys.stdin)[\"repo_id\"])")
+echo "the business brain flow marker BRAINFLOW42" > /tmp/brainflow.txt
+UP=$(curl -sf -H "Authorization: Token $TOK" "$SF/api2/repos/$REPO/upload-link/" | tr -d '"')
+# seafhttp links carry the external (.internal via caddy) URL; the host
+# resolves it to loopback and trusts caddy's internal CA explicitly.
+HP=$(python3 -c "import urllib.parse,sys; u=urllib.parse.urlparse(sys.argv[1]); print(str(u.hostname)+chr(58)+str(u.port or 443))" "$UP")
+curl -sf --resolve "$HP:127.0.0.1" --cacert "$D/caddy-root-ca.crt" -F file=@/tmp/brainflow.txt -F parent_dir=/ "$UP" > /dev/null
+printf "%s %s" "$REPO" "$TOK" > /tmp/brainflow-state
+'''
+
+[[tests.checks]]
+action = "shell"
+name = "bridge-drops-into-consume"
+timeout = 60
+run = '''
+set -e
+D=${RYRA_DATA_DIR:-$HOME/.local/share/services}
+. $D/seafile/.env
+SF=http://127.0.0.1:$SERVICE_PORT_HTTP
+REPO=$(cut -d" " -f1 /tmp/brainflow-state); TOK=$(cut -d" " -f2 /tmp/brainflow-state)
+DL=$(curl -sf -H "Authorization: Token $TOK" "$SF/api2/repos/$REPO/file/?p=/brainflow.txt" | tr -d '"')
+HP=$(python3 -c "import urllib.parse,sys; u=urllib.parse.urlparse(sys.argv[1]); print(str(u.hostname)+chr(58)+str(u.port or 443))" "$DL")
+curl -sfL --resolve "$HP:127.0.0.1" --cacert "$D/caddy-root-ca.crt" "$DL" -o /tmp/brainflow-out.txt
+grep -q BRAINFLOW42 /tmp/brainflow-out.txt
+podman exec -i paperless-ngx sh -c 'mkdir -p /usr/src/paperless/consume && cat > /usr/src/paperless/consume/brainflow.txt' < /tmp/brainflow-out.txt
+'''
+
+[[tests.checks]]
+action = "shell"
+name = "paperless-consumed-the-document"
+timeout = 240
+run = '''
+D=${RYRA_DATA_DIR:-$HOME/.local/share/services}
+. $D/paperless-ngx/.env
+P=http://127.0.0.1:$SERVICE_PORT_HTTP
+for i in $(seq 1 60); do
+  n=$(curl -sf -u "$PAPERLESS_ADMIN_USER:$PAPERLESS_ADMIN_PASSWORD" "$P/api/documents/?query=BRAINFLOW42" | python3 -c "import json,sys; print(json.load(sys.stdin).get(\"count\",0))" 2>/dev/null || echo 0)
+  [ "$n" -ge 1 ] && exit 0
+  sleep 3
+done
+echo "document never appeared in paperless" >&2
+exit 1
+'''
+
+[[tests.checks]]
+action = "shell"
+name = "failure-lands-in-matrix-room"
+timeout = 180
+run = '''
+set -e
+D=${RYRA_DATA_DIR:-$HOME/.local/share/services}
+. $D/synapse/.env
+HS=http://127.0.0.1:$SERVICE_PORT_HTTP
+podman exec synapse-homeserver register_new_matrix_user -u ryra-bot -p BrainBot-123 --no-admin -k "$SYNAPSE_REGISTRATION_SHARED_SECRET" http://localhost:8008
+BOT=$(curl -sf -X POST -H "Content-Type: application/json" -d '{"type":"m.login.password","identifier":{"type":"m.id.user","user":"ryra-bot"},"password":"BrainBot-123"}' $HS/_matrix/client/v3/login | python3 -c "import json,sys; print(json.load(sys.stdin)[\"access_token\"])")
+ROOM=$(curl -sf -X POST -H "Authorization: Bearer $BOT" -H "Content-Type: application/json" -d '{"name":"ops"}' $HS/_matrix/client/v3/createRoom | python3 -c "import json,sys; print(json.load(sys.stdin)[\"room_id\"])")
+ryra notify connect --matrix "$HS" --room "$ROOM" --token "$BOT"
+ryra notify test
+ok=1
+for i in $(seq 1 20); do
+  if curl -sf -H "Authorization: Bearer $BOT" "$HS/_matrix/client/v3/rooms/$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=\"\"))" "$ROOM")/messages?dir=b&limit=10" | grep -q "Ryra: test failed"; then ok=0; break; fi
+  sleep 2
+done
+ryra notify disconnect
+exit $ok
+'''
