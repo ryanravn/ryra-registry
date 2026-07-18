@@ -1,6 +1,8 @@
 [service]
 name = "authelia"
 description = "Authelia - lightweight SSO and 2FA server"
+category = "security"
+tags = ["sso", "oidc", "auth"]
 url = "https://www.authelia.com/"
 architecture = ["amd64", "arm64"]
 https = "always"
@@ -104,3 +106,11 @@ AUTHELIA_NOTIFIER_SMTP_USERNAME = "{{smtp.username}}"
 AUTHELIA_NOTIFIER_SMTP_PASSWORD = "{{smtp.password}}"
 AUTHELIA_NOTIFIER_SMTP_SENDER = "{{smtp.from}}"
 AUTHELIA_NOTIFIER_SMTP_DISABLE_REQUIRE_TLS = "true"
+
+# Autoupdate hint (registry tooling only, the box never self-updates).
+# The image pin tracks the 4.39 minor line, so the capture group is
+# major.minor of the upstream release tag (v4.39.11 yields 4.39).
+[autoupdate]
+strategy = "github-release"
+repo = "authelia/authelia"
+tag_regex = '^v(\d+\.\d+)\.\d+$'

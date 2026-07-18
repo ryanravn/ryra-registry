@@ -1,6 +1,8 @@
 [service]
 name = "prometheus"
 description = "Prometheus - metrics collection and time-series database"
+category = "monitoring"
+tags = ["metrics", "alerting"]
 url = "https://prometheus.io/docs/"
 architecture = ["amd64", "arm64"]
 
@@ -23,3 +25,10 @@ backup = true
 
 [backup]
 paths = ["data", "targets"]
+
+# Autoupdate hint (registry tooling only, the box never self-updates).
+# The capture keeps the v prefix because the image tag carries it.
+[autoupdate]
+strategy = "github-release"
+repo = "prometheus/prometheus"
+tag_regex = '^(v\d+\.\d+\.\d+)$'

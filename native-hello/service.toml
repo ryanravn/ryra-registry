@@ -6,6 +6,8 @@
 [service]
 name = "native-hello"
 description = "Minimal std-only HTTP server: says hello, logs visitors + headers. Demonstrates native (non-podman) services."
+category = "other"
+tags = ["example"]
 runtime = "native"
 # `build` (optional) runs in this folder, then ryra runs `run` directly under
 # systemd --user (in this folder) with SERVICE_PORT_HTTP + SERVICE_HOME injected.

@@ -1,6 +1,8 @@
 [service]
 name = "nextcloud"
 description = "Nextcloud - self-hosted file sync, calendar, contacts, collaboration"
+category = "storage"
+tags = ["files", "sync", "office"]
 url = "https://nextcloud.com/"
 architecture = ["amd64", "arm64"]
 https = "auth"

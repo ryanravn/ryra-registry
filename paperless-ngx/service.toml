@@ -1,6 +1,8 @@
 [service]
 name = "paperless-ngx"
 description = "Paperless-ngx - document management with OCR, auto-tagging, and full-text search"
+category = "productivity"
+tags = ["documents", "ocr", "archive"]
 url = "https://docs.paperless-ngx.com/"
 architecture = ["amd64", "arm64"]
 https = "auth"
@@ -70,3 +72,11 @@ PAPERLESS_SOCIALACCOUNT_PROVIDERS = '{"openid_connect":{"APPS":[{"provider_id":"
 PAPERLESS_SOCIALACCOUNT_ALLOW_SIGNUPS = "true"
 PAPERLESS_SOCIAL_AUTO_SIGNUP = "true"
 PAPERLESS_ACCOUNT_DEFAULT_HTTP_PROTOCOL = "{{service.scheme}}"
+
+# Autoupdate hint (registry tooling only, the box never self-updates).
+# Upstream tags carry a v prefix, the image tags do not. Only the
+# paperless-ngx tag is bumped; the pinned redis never matches.
+[autoupdate]
+strategy = "github-release"
+repo = "paperless-ngx/paperless-ngx"
+tag_regex = '^v(\d+\.\d+\.\d+)$'

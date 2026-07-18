@@ -1,6 +1,8 @@
 [service]
 name = "caddy"
 description = "Caddy - automatic HTTPS reverse proxy"
+category = "infrastructure"
+tags = ["reverse-proxy", "tls"]
 url = "https://caddyserver.com"
 architecture = ["amd64", "arm64"]
 kind = "infrastructure"

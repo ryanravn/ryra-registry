@@ -1,6 +1,8 @@
 [service]
 name = "docuseal"
 description = "DocuSeal — open-source document signing (DocuSign alternative)"
+category = "productivity"
+tags = ["documents", "signatures"]
 url = "https://www.docuseal.com/"
 architecture = ["amd64", "arm64"]
 
@@ -42,3 +44,9 @@ SMTP_PORT = "{{smtp.port}}"
 SMTP_USERNAME = "{{smtp.username}}"
 SMTP_PASSWORD = "{{smtp.password}}"
 SMTP_FROM = "{{smtp.from}}"
+
+# Autoupdate hint (registry tooling only, the box never self-updates).
+[autoupdate]
+strategy = "github-release"
+repo = "docusealco/docuseal"
+tag_regex = '^(\d+\.\d+\.\d+)$'

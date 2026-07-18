@@ -1,0 +1,85 @@
+name: autoupdate
+
+# Weekly upstream version sweep. scripts/autoupdate.py reads each
+# recipe's [autoupdate] hint, asks the upstream (GitHub releases or the
+# image registry's tag list) for the newest version, and for every
+# recipe that is behind this workflow opens ONE pull request per
+# service on branch autoupdate/<service>-<version>.
+#
+# Philosophy: the box never self-updates app versions. These PRs are
+# gated by the VM test suite (the CI workflow), and users upgrade
+# explicitly. A branch or open PR that already exists for the same
+# service and version is left alone.
+
+on:
+  schedule:
+    # Mondays, 06:17 UTC (an offset minute to avoid the on-the-hour rush).
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  autoupdate:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Plan bumps (dry run, read-only)
+        id: plan
+        run: |
+          set -o pipefail
+          rc=0
+          python3 scripts/autoupdate.py --dry-run | tee /tmp/autoupdate-plan.txt || rc=$?
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+
+      - name: Open one PR per bumped service
+        run: |
+          set -eu
+          git config user.name "ryra-autoupdate[bot]"
+          git config user.email "autoupdate-bot@users.noreply.github.com"
+          base="${GITHUB_REF_NAME}"
+          grep '^BUMP ' /tmp/autoupdate-plan.txt | while read -r _ svc old new; do
+            branch="autoupdate/${svc}-${new}"
+
+            # Guard: never open a duplicate. An existing remote branch
+            # or an open PR for it means a previous run already did.
+            if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+              echo "skip ${svc}: branch ${branch} already exists on origin"
+              continue
+            fi
+            if [ "$(gh pr list --head "$branch" --state open --json number --jq 'length')" != "0" ]; then
+              echo "skip ${svc}: an open PR for ${branch} already exists"
+              continue
+            fi
+
+            git checkout -B "$branch" "origin/${base}"
+            python3 scripts/autoupdate.py --apply "$svc"
+            git add "${svc}/quadlets"
+            git commit -m "autoupdate: bump ${svc} ${old} to ${new}"
+            git push -u origin "$branch"
+
+            {
+              printf 'Automated version bump for **%s**: `%s` to `%s`.\n\n' "$svc" "$old" "$new"
+              printf 'Every Image= tag in this recipe'"'"'s quadlets that carried `%s` now carries `%s`.\n\n' "$old" "$new"
+              printf 'Merging is gated by the VM test suite (CI). The box never self-updates: users pick up this version by upgrading explicitly.\n\n'
+              printf 'Opened by the weekly autoupdate workflow.\n'
+            } > /tmp/pr-body.md
+            gh pr create \
+              --head "$branch" \
+              --base "$base" \
+              --title "autoupdate: bump ${svc} ${old} to ${new}" \
+              --body-file /tmp/pr-body.md
+
+            git checkout "$base"
+          done
+
+      - name: Fail when any hint could not be checked
+        if: steps.plan.outputs.rc != '0'
+        run: |
+          echo "One or more recipes with an [autoupdate] hint could not be checked; see the plan step."
+          exit 1

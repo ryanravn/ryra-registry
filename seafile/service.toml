@@ -1,6 +1,8 @@
 [service]
 name = "seafile"
 description = "Seafile - file sync and share server"
+category = "storage"
+tags = ["files", "sync"]
 url = "https://www.seafile.com/"
 architecture = ["amd64", "arm64"]
 https = "always"
@@ -243,3 +245,10 @@ OAUTH_CLIENT_SECRET = "{{auth.client_secret}}"
 OAUTH_REDIRECT_URL = "{{service.external_url}}/oauth/callback/"
 OAUTH_PROVIDER_DOMAIN = "{{auth.external_url}}"
 OAUTH_INTERNAL_DOMAIN = "{{auth.external_url}}"
+
+# Autoupdate hint (registry tooling only, the box never self-updates).
+# Upstream GitHub releases do not map cleanly to the seafile-mc image,
+# so follow the image's own registry tags.
+[autoupdate]
+strategy = "registry-tags"
+tag_regex = '^(\d+\.\d+\.\d+)$'

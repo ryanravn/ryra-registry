@@ -1,6 +1,8 @@
 [service]
 name = "inbucket"
 description = "Inbucket - disposable email testing server with web UI"
+category = "infrastructure"
+tags = ["email", "smtp"]
 url = "https://inbucket.org/"
 kind = "infrastructure"
 architecture = ["amd64", "arm64"]
@@ -23,3 +25,10 @@ smtp = false
 
 [capabilities]
 provides = ["smtp-relay"]
+
+# Autoupdate hint (registry tooling only, the box never self-updates).
+# Upstream tags carry a v prefix, the image tags do not.
+[autoupdate]
+strategy = "github-release"
+repo = "inbucket/inbucket"
+tag_regex = '^v(\d+\.\d+\.\d+)$'

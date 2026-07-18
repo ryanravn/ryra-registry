@@ -1,6 +1,8 @@
 [service]
 name = "grafana"
 description = "Grafana - dashboards and visualization for metrics and logs"
+category = "monitoring"
+tags = ["dashboards", "metrics"]
 url = "https://grafana.com/docs/grafana/latest/"
 architecture = ["amd64", "arm64"]
 
@@ -62,3 +64,10 @@ GF_SMTP_HOST = "{{smtp.host}}:{{smtp.port}}"
 GF_SMTP_USER = "{{smtp.username}}"
 GF_SMTP_PASSWORD = "{{smtp.password}}"
 GF_SMTP_FROM_ADDRESS = "{{smtp.from}}"
+
+# Autoupdate hint (registry tooling only, the box never self-updates).
+# Upstream tags carry a v prefix, the image tags do not.
+[autoupdate]
+strategy = "github-release"
+repo = "grafana/grafana"
+tag_regex = '^v(\d+\.\d+\.\d+)$'

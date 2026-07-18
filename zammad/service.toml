@@ -1,6 +1,8 @@
 [service]
 name = "zammad"
 description = "Zammad - open-source helpdesk and ticketing system with native OIDC"
+category = "communication"
+tags = ["helpdesk", "tickets"]
 url = "https://docs.zammad.org/"
 architecture = ["amd64", "arm64"]
 https = "auth"
@@ -201,3 +203,11 @@ SMTP_USER = "{{smtp.username}}"
 SMTP_PASS = "{{smtp.password}}"
 SMTP_FROM = "{{smtp.from}}"
 SMTP_SECURITY = "{{smtp.security}}"
+
+# Autoupdate hint (registry tooling only, the box never self-updates).
+# All five zammad containers share one image and one tag (version plus
+# build suffix, e.g. 7.0.1-0019); the pinned postgres, elasticsearch,
+# redis and memcached images never match the version string.
+[autoupdate]
+strategy = "registry-tags"
+tag_regex = '^(\d+\.\d+\.\d+-\d+)$'

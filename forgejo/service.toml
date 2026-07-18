@@ -1,6 +1,8 @@
 [service]
 name = "forgejo"
 description = "Forgejo - self-hosted Git forge"
+category = "development"
+tags = ["git", "code-hosting"]
 url = "https://forgejo.org/docs/"
 architecture = ["amd64", "arm64"]
 https = "auth"

@@ -1,6 +1,8 @@
 [service]
 name = "twenty"
 description = "Twenty - open-source CRM alternative to Salesforce"
+category = "productivity"
+tags = ["crm"]
 url = "https://twenty.com/"
 architecture = ["amd64", "arm64"]
 
@@ -139,3 +141,10 @@ EMAIL_SMTP_NO_TLS = "{{ smtp.security | smtp_no_tls }}"
 # providers and shows up oddly in test sinks. Use the configured sender.
 EMAIL_FROM_ADDRESS = "{{smtp.from}}"
 EMAIL_FROM_NAME = "Twenty"
+
+# Autoupdate hint (registry tooling only, the box never self-updates).
+# The capture keeps the v prefix because the image tag carries it.
+[autoupdate]
+strategy = "github-release"
+repo = "twentyhq/twenty"
+tag_regex = '^(v\d+\.\d+\.\d+)$'

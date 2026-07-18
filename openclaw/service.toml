@@ -1,6 +1,8 @@
 [service]
 name = "openclaw"
 description = "OpenClaw - self-hosted AI assistant gateway"
+category = "automation"
+tags = ["ai", "agents"]
 url = "https://docs.openclaw.ai/"
 architecture = ["amd64", "arm64"]
 
@@ -31,3 +33,9 @@ prompt = "OpenAI API key (leave empty to skip)"
 [integrations]
 auth = []
 smtp = false
+
+# Autoupdate hint (registry tooling only, the box never self-updates).
+# Calver image tags with an optional build suffix (2026.3.13-1).
+[autoupdate]
+strategy = "registry-tags"
+tag_regex = '^(\d+\.\d+\.\d+(?:-\d+)?)$'

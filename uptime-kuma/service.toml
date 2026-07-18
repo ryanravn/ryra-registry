@@ -1,6 +1,8 @@
 [service]
 name = "uptime-kuma"
 description = "Uptime Kuma - self-hosted monitoring tool"
+category = "monitoring"
+tags = ["uptime", "alerting"]
 url = "https://github.com/louislam/uptime-kuma"
 architecture = ["amd64", "arm64"]
 
@@ -20,3 +22,11 @@ backup = true
 
 [backup]
 paths = ["data"]
+
+# Autoupdate hint (registry tooling only, the box never self-updates).
+# The image pin is the floating major tag, so the capture is the major
+# only; this fires when a new stable major (2.x) is released.
+[autoupdate]
+strategy = "github-release"
+repo = "louislam/uptime-kuma"
+tag_regex = '^(\d+)\.\d+\.\d+$'

@@ -1,6 +1,8 @@
 [service]
 name = "node-exporter"
 description = "Node Exporter - host-level metrics (CPU, RAM, disk, network) for Prometheus"
+category = "monitoring"
+tags = ["metrics", "host"]
 url = "https://prometheus.io/docs/guides/node-exporter/"
 architecture = ["amd64", "arm64"]
 post_install = """
@@ -29,3 +31,11 @@ auth = []
 smtp = false
 # Stateless exporter — nothing to back up.
 backup = false
+
+# Autoupdate hint (registry tooling only, the box never self-updates).
+# Note the underscore in the upstream repo name. The capture keeps the
+# v prefix because the image tag carries it.
+[autoupdate]
+strategy = "github-release"
+repo = "prometheus/node_exporter"
+tag_regex = '^(v\d+\.\d+\.\d+)$'

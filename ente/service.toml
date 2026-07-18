@@ -1,6 +1,8 @@
 [service]
 name = "ente"
 description = "Ente - end-to-end encrypted photo storage and 2FA"
+category = "media"
+tags = ["photos", "encryption"]
 url = "https://ente.io"
 architecture = ["amd64", "arm64"]
 

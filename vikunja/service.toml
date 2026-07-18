@@ -1,6 +1,8 @@
 [service]
 name = "vikunja"
 description = "Vikunja - task management with lists, kanban boards, and calendars"
+category = "productivity"
+tags = ["tasks", "todo"]
 url = "https://vikunja.io/docs/"
 architecture = ["amd64", "arm64"]
 https = "auth"
@@ -78,3 +80,10 @@ VIKUNJA_MAILER_PORT = "{{smtp.port}}"
 VIKUNJA_MAILER_USERNAME = "{{smtp.username}}"
 VIKUNJA_MAILER_PASSWORD = "{{smtp.password}}"
 VIKUNJA_MAILER_FROMEMAIL = "{{smtp.from}}"
+
+# Autoupdate hint (registry tooling only, the box never self-updates).
+# Vikunja development lives on kolaente.dev, so follow the Docker Hub
+# tags of the image itself.
+[autoupdate]
+strategy = "registry-tags"
+tag_regex = '^(\d+\.\d+\.\d+)$'

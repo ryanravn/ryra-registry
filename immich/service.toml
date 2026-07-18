@@ -1,6 +1,8 @@
 [service]
 name = "immich"
 description = "Immich - self-hosted photo & video management"
+category = "media"
+tags = ["photos", "backup"]
 url = "https://immich.app/"
 architecture = ["amd64", "arm64"]
 https = "auth"
@@ -118,3 +120,12 @@ OAUTH_ISSUER_URL = "{{auth.issuer}}"
 OAUTH_REDIRECT_URL = "{{service.external_url}}/auth/login"
 OAUTHLIB_INSECURE_TRANSPORT = "1"
 NODE_TLS_REJECT_UNAUTHORIZED = "0"
+
+# Autoupdate hint (registry tooling only, the box never self-updates).
+# The capture keeps the v prefix because the immich image tags carry it.
+# Only the immich-server and immich-machine-learning tags are bumped;
+# the pinned postgres and valkey images never match the version string.
+[autoupdate]
+strategy = "github-release"
+repo = "immich-app/immich"
+tag_regex = '^(v\d+\.\d+\.\d+)$'

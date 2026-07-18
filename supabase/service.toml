@@ -1,6 +1,8 @@
 [service]
 name = "supabase"
 description = "Supabase - open source Firebase alternative"
+category = "development"
+tags = ["database", "postgres", "baas"]
 url = "https://supabase.com/docs/guides/self-hosting"
 architecture = ["amd64", "arm64"]
 

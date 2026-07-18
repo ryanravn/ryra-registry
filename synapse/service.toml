@@ -1,6 +1,8 @@
 [service]
 name = "synapse"
 description = "Matrix homeserver (Synapse) + Element web client"
+category = "communication"
+tags = ["matrix", "chat"]
 url = "https://element-hq.github.io/synapse/"
 architecture = ["amd64", "arm64"]
 https = "auth"
@@ -131,3 +133,12 @@ OAUTH_CLIENT_SECRET = "{{ auth.client_secret}}"
 # advertises its external (HTTPS) URL as the issuer, so we must use that —
 # the auth-bridge makes it reachable from within the synapse container.
 AUTH_EXTERNAL_URL = "{{ auth.external_url}}"
+
+# Autoupdate hint (registry tooling only, the box never self-updates).
+# Covers the synapse homeserver image only; element-web has its own
+# release train and is bumped by hand. The capture keeps the v prefix
+# because the image tag carries it.
+[autoupdate]
+strategy = "github-release"
+repo = "element-hq/synapse"
+tag_regex = '^(v\d+\.\d+\.\d+)$'

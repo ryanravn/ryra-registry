@@ -1,6 +1,8 @@
 [service]
 name = "minio"
 description = "MinIO - S3-compatible object storage. The recommended `ryra backup` target, typically hosted on a separate machine reachable over your tailnet."
+category = "storage"
+tags = ["s3", "object-storage"]
 url = "https://min.io/"
 # kind = "application" (the default) — unlike caddy/inbucket which
 # are pure glue, minio is the destination other machines back up to,
