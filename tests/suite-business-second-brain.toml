@@ -4,7 +4,7 @@
 # against the real installs, nothing installed or removed.
 [[tests]]
 name = "suite-business-second-brain"
-ram = 7168
+ram = 6144
 suite = "business-second-brain"
 
 [[tests.checks]]
@@ -25,8 +25,8 @@ timeout = 180
 
 [[tests.checks]]
 action = "http"
-name = "hermes-gateway-healthy"
-url = "http://127.0.0.1:$SERVICE_PORT_HTTP/health"
-service = "hermes"
-poll = { interval = 3, attempts = 40 }
-timeout = 180
+name = "twenty-responds"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
+service = "twenty"
+poll = { interval = 5, attempts = 60 }
+timeout = 300

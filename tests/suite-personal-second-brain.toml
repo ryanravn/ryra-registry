@@ -4,7 +4,7 @@
 # against the real installs, nothing installed or removed.
 [[tests]]
 name = "suite-personal-second-brain"
-ram = 6144
+ram = 4096
 suite = "personal-second-brain"
 
 [[tests.checks]]
@@ -20,13 +20,5 @@ action = "http"
 name = "paperless-responds"
 url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
 service = "paperless-ngx"
-poll = { interval = 3, attempts = 40 }
-timeout = 180
-
-[[tests.checks]]
-action = "http"
-name = "hermes-gateway-healthy"
-url = "http://127.0.0.1:$SERVICE_PORT_HTTP/health"
-service = "hermes"
 poll = { interval = 3, attempts = 40 }
 timeout = 180
