@@ -1,0 +1,71 @@
+# Syncthing: the box as an always-on peer-to-peer sync hub. Folders and
+# devices are configured in the web GUI, not here. The GUI rides ryra's
+# normal exposure choice (loopback, internal, tailscale, public); the sync
+# and discovery ports are NOT http and never go through serve/Caddy: peers
+# dial them directly, over the tailnet in tailscale mode or LAN/forwarded
+# ports otherwise, so they are pinned to their well-known numbers.
+
+[service]
+name = "syncthing"
+description = "Syncthing: continuous peer-to-peer file sync between your devices, with this box as the always-on hub"
+category = "storage"
+tags = ["sync", "files", "p2p", "backup"]
+url = "https://docs.syncthing.net/"
+architecture = ["amd64", "arm64"]
+# "never" = loopback GUI is a valid default (the hub pattern: admin over
+# ssh/tailnet, expose deliberately). Internal/tailscale/public exposures
+# all carry HTTPS by construction, so this only permits the private mode.
+https = "never"
+
+[requirements.ram]
+min = 128
+recommended = 512
+
+# The web GUI. Dynamic host port; reachable per the exposure choice.
+[[ports]]
+name = "http"
+container_port = 8384
+tailscale_https = 443
+
+# Sync protocol, TCP and QUIC on the same well-known number. Fixed host
+# ports: remote devices are told "reach me at <host>:22000" and firewalls
+# get opened for it once.
+[[ports]]
+name = "sync"
+container_port = 22000
+host_port = 22000
+protocol = "tcp"
+
+[[ports]]
+name = "quic"
+container_port = 22000
+host_port = 22000
+protocol = "udp"
+
+# LAN broadcast discovery. Best-effort under rootless podman networking;
+# global discovery + relays cover the rest.
+[[ports]]
+name = "discovery"
+container_port = 21027
+host_port = 21027
+protocol = "udp"
+
+# The image's GUI listener must bind all container interfaces for the
+# published port to reach it; auth is the GUI's own user + password.
+[[env]]
+name = "STGUIADDRESS"
+value = "0.0.0.0:8384"
+
+[integrations]
+# Identity (device keys) + folder config are what must survive a box loss;
+# the synced payloads under data/ re-sync from peers, so the default backup
+# stays small instead of snapshotting the whole hub.
+backup = true
+
+[backup]
+paths = ["data/config"]
+
+[autoupdate]
+strategy = "github-release"
+repo = "syncthing/syncthing"
+tag_regex = '^v(\d+\.\d+\.\d+)$'

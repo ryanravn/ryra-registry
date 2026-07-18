@@ -1,0 +1,26 @@
+[Unit]
+Description=Syncthing
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Container]
+ContainerName=syncthing
+Image=docker.io/syncthing/syncthing:2.1.2
+PublishPort=${SERVICE_PORT_HTTP}:8384
+PublishPort=${SERVICE_PORT_SYNC}:22000
+PublishPort=${SERVICE_PORT_QUIC}:22000/udp
+PublishPort=${SERVICE_PORT_DISCOVERY}:21027/udp
+Volume=${SERVICE_HOME}/data:/var/syncthing:Z,U
+Pull=missing
+EnvironmentFile=%h/.local/share/services/syncthing/.env
+# busybox-safe: the image is alpine-based, no curl guaranteed.
+HealthCmd=nc -z 127.0.0.1 8384 || exit 1
+
+[Service]
+EnvironmentFile=%h/.local/share/services/syncthing/.env
+Restart=always
+RestartSec=5
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target

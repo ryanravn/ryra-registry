@@ -1,0 +1,19 @@
+# syncthing tests: install only. The GUI must answer and the device
+# identity must mint on first boot (that is the part backups protect).
+
+[[tests]]
+name = "syncthing"
+[[tests.checks]]
+action = "http"
+name = "gui-responds"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP/rest/noauth/health"
+service = "syncthing"
+poll = { interval = 2, attempts = 30 }
+timeout = 90
+[[tests.checks]]
+action = "shell"
+name = "identity-created"
+# The config dir belongs to the container's mapped uid (rootless :U
+# volume), so the host user cannot stat inside it: check from within.
+# The device key mints before the GUI answers, so no polling needed.
+run = "podman exec syncthing test -f /var/syncthing/config/cert.pem"
