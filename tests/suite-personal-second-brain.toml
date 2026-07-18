@@ -9,11 +9,11 @@ suite = "personal-second-brain"
 
 [[tests.checks]]
 action = "http"
-name = "syncthing-responds"
-url = "http://127.0.0.1:$SERVICE_PORT_HTTP/rest/noauth/health"
-service = "syncthing"
-poll = { interval = 2, attempts = 30 }
-timeout = 90
+name = "seafile-responds"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP"
+service = "seafile"
+poll = { interval = 3, attempts = 60 }
+timeout = 240
 
 [[tests.checks]]
 action = "http"
