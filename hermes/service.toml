@@ -33,6 +33,15 @@ name = "http"
 container_port = 8642
 tailscale_https = 443
 
+# The human dashboard, opt-in (HERMES_DASHBOARD=1). A pre-start hook
+# provisions dashboard basic auth into config.yaml with the image's own
+# scrypt helper (the image refuses non-loopback dashboard binds without a
+# registered auth provider); anonymous requests redirect to its login.
+[[ports]]
+name = "web"
+container_port = 9119
+tailscale_https = 9119
+
 [[env]]
 name = "API_SERVER_ENABLED"
 value = "true"
@@ -46,6 +55,24 @@ value = "0.0.0.0"
 [[env]]
 name = "API_SERVER_KEY"
 value = "{{secret.api_key}}"
+
+[[env]]
+name = "HERMES_DASHBOARD"
+value = "0"
+kind = "prompted"
+prompt = "Enable the web dashboard? (1 = yes; login: user hermes, the generated dashboard password)"
+
+[[env]]
+name = "HERMES_DASHBOARD_HOST"
+value = "0.0.0.0"
+
+[[env]]
+name = "HERMES_DASHBOARD_PORT"
+value = "9119"
+
+[[env]]
+name = "HERMES_DASHBOARD_PASSWORD"
+value = "{{secret.dashboard_password}}"
 
 # Model access. Either or both; can also be configured later in the
 # mounted data dir, so empty is a valid install.

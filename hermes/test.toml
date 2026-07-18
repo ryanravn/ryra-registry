@@ -27,3 +27,31 @@ run = ". ${RYRA_DATA_DIR:-$HOME/.local/share/services}/hermes/.env; c=$(curl -s 
 action = "shell"
 name = "data-dir-created"
 run = "test -d ${RYRA_DATA_DIR:-$HOME/.local/share/services}/hermes/data"
+
+# Opt-in dashboard: provisioned basic auth lets it bind non-loopback, and
+# anonymous requests are gated behind its login redirect.
+[[tests]]
+name = "hermes-dashboard"
+ram = 2048
+[[tests.setup]]
+action = "add"
+service = "hermes"
+env = { HERMES_DASHBOARD = "1" }
+[[tests.setup]]
+action = "wait"
+service = "hermes"
+[[tests.checks]]
+action = "http"
+name = "gateway-healthy"
+url = "http://127.0.0.1:$SERVICE_PORT_HTTP/health"
+service = "hermes"
+poll = { interval = 3, attempts = 40 }
+timeout = 180
+[[tests.checks]]
+action = "shell"
+name = "dashboard-gated"
+run = ". ${RYRA_DATA_DIR:-$HOME/.local/share/services}/hermes/.env; r=$(curl -s -o /dev/null -w '%{redirect_url}' http://127.0.0.1:$SERVICE_PORT_WEB/); case $r in *auth/login*) exit 0;; *) echo \"redirect was: $r\" >&2; exit 1;; esac"
+[[tests.checks]]
+action = "shell"
+name = "dashboard-login-page"
+run = ". ${RYRA_DATA_DIR:-$HOME/.local/share/services}/hermes/.env; test \"$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:$SERVICE_PORT_WEB/login)\" = 200"

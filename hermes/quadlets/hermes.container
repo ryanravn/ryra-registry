@@ -8,6 +8,7 @@ ContainerName=hermes
 Image=docker.io/nousresearch/hermes-agent:v2026.7.7.2
 Exec=gateway run
 PublishPort=${SERVICE_PORT_HTTP}:8642
+PublishPort=${SERVICE_PORT_WEB}:9119
 Volume=${SERVICE_HOME}/data:/opt/data:Z,U
 Pull=missing
 EnvironmentFile=%h/.local/share/services/hermes/.env
@@ -17,6 +18,12 @@ HealthCmd=curl -sf http://127.0.0.1:8642/health || exit 1
 
 [Service]
 EnvironmentFile=%h/.local/share/services/hermes/.env
+# Provision dashboard basic auth into config.yaml (idempotent; uses the
+# image's own scrypt helper) so an enabled dashboard may bind non-loopback.
+# chr() instead of escapes keeps the one-liner survivable through
+# systemd's Exec parsing. Best-effort (leading -): a failure here must not
+# block the gateway.
+ExecStartPre=-/usr/bin/podman run --rm --entrypoint python -e HERMES_DASHBOARD_PASSWORD -v ${SERVICE_HOME}/data:/opt/data:Z,U docker.io/nousresearch/hermes-agent:v2026.7.7.2 -c 'import os,pathlib;from plugins.dashboard_auth.basic import hash_password;p=pathlib.Path("/opt/data/config.yaml");s=p.read_text() if p.exists() else "";n=chr(10);q=chr(34);h=hash_password(os.environ["HERMES_DASHBOARD_PASSWORD"]);("basic_auth" in s) or p.write_text(s+n+"dashboard:"+n+"  basic_auth:"+n+"    username: hermes"+n+"    password_hash: "+q+h+q+n)'
 Restart=always
 RestartSec=5
 # Big image (bundled browser); first pull + first boot take a while.
