@@ -3,6 +3,9 @@ name = "personal-second-brain"
 description = "Your external memory, private-first: syncthing feeds the box plain files from every device (AI-editable on disk), paperless-ngx archives and OCRs documents, vikunja tracks tasks, and hermes is the agent that remembers"
 
 [defaults]
+# SSO where members support it (paperless-ngx, vikunja); syncthing keeps
+# its own GUI auth and hermes its API key, both by design.
+auth = true
 backup = true
 
 [[members]]
