@@ -4,8 +4,10 @@ description = "Your external memory: seafile holds your libraries (per-device se
 
 [defaults]
 # SSO where members support it (paperless-ngx); seafile's own accounts
-# stay primary for sync clients.
+# stay primary for sync clients. Outbound app mail (share invites,
+# resets) is captured by the local sink until a real relay is configured.
 auth = true
+smtp = true
 backup = true
 
 [[members]]
