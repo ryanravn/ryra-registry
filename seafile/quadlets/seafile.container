@@ -11,6 +11,16 @@ ContainerName=seafile
 Network=seafile.network
 PublishPort=${SERVICE_PORT_HTTP}:80
 Volume=${SERVICE_HOME}/shared:/shared:Z
+# seaf-fuse: the libraries as a read-only filesystem at /seaf-fuse inside
+# the container (mount-fuse.sh below). Rootless FUSE needs only the
+# device node; the mount stays in the container's namespace, host access
+# goes through podman exec.
+AddDevice=/dev/fuse
+# Mounting FUSE inside the container needs SYS_ADMIN *in the container's
+# user namespace*: rootless, this is the namespaced capability (a far
+# weaker grant than host SYS_ADMIN), and fuse mounting is its exact
+# intended use. Without it fusermount gets EPERM.
+AddCapability=CAP_SYS_ADMIN
 Pull=missing
 EnvironmentFile=%h/.local/share/services/seafile/.env
 HealthCmd=curl -sf http://localhost:80/ || exit 1
@@ -24,6 +34,7 @@ ExecStartPost=/bin/bash ${SERVICE_HOME}/configs/scripts/inject-oauth.sh
 ExecStartPost=/bin/bash ${SERVICE_HOME}/configs/scripts/inject-smtp.sh
 ExecStartPost=/bin/bash ${SERVICE_HOME}/configs/scripts/restart-seahub.sh
 ExecStartPost=/bin/bash ${SERVICE_HOME}/configs/scripts/enable-seafdav.sh
+ExecStartPost=/bin/bash ${SERVICE_HOME}/configs/scripts/mount-fuse.sh
 
 [Install]
 WantedBy=default.target
