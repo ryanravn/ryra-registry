@@ -217,9 +217,13 @@ SECRET=$(awk -F'"' '/^secret_access_key = /{print $2}' $PREFS)
 export AWS_ACCESS_KEY_ID=$ACCESS
 export AWS_SECRET_ACCESS_KEY=$SECRET
 export RESTIC_PASSWORD
+PFX=$(awk -F'"' '/^prefix = /{print $2}' $PREFS)
 SCHEME=${ENDPOINT%%://*}
 HOST=${ENDPOINT#*://}
-REPO=s3:${SCHEME}://${HOST}/${BUCKET}
+# The engine scopes each machine to a sub-prefix inside the bucket
+# (backend.prefix, defaulted to the machine id at enroll); the repo
+# lives there, not at the bucket root.
+REPO=s3:${SCHEME}://${HOST}/${BUCKET}${PFX:+/$PFX}
 
 SVC_PREFIX=${RYRA_DATA_DIR:-$HOME/.local/share/services}/supabase/
 FILES=$(restic ls --repo $REPO --tag service:supabase latest 2>/dev/null \\

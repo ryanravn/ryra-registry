@@ -94,8 +94,23 @@ name = "list-shows-snapshot"
 run = """set -euo pipefail
 OUTPUT=$(ryra backup list native-hello 2>&1)
 echo "$OUTPUT"
-echo "$OUTPUT" | grep -q 'service:native-hello' || {
-    echo "expected a snapshot tagged service:native-hello in: $OUTPUT"
+echo "$OUTPUT" | grep -q 'restore point' || {
+    echo "expected a restore point for native-hello in: $OUTPUT"
+    exit 1
+}
+# The tag is what retention and restore filter on, so assert it from
+# restic's own record (the list table is presentation, not truth).
+PREFS=${RYRA_CONFIG_DIR:-$HOME/.config/services}/preferences.toml
+RESTIC_PASSWORD=$(awk -F'"' '/^password = /{print $2; exit}' $PREFS)
+ENDPOINT=$(awk -F'"' '/^endpoint = /{print $2}' $PREFS)
+BUCKET=$(awk -F'"' '/^bucket = /{print $2}' $PREFS)
+PFX=$(awk -F'"' '/^prefix = /{print $2}' $PREFS)
+export AWS_ACCESS_KEY_ID=$(awk -F'"' '/^access_key_id = /{print $2}' $PREFS)
+export AWS_SECRET_ACCESS_KEY=$(awk -F'"' '/^secret_access_key = /{print $2}' $PREFS)
+export RESTIC_PASSWORD
+REPO=s3:${ENDPOINT%%://*}://${ENDPOINT#*://}/${BUCKET}${PFX:+/$PFX}
+restic snapshots --repo $REPO --tag service:native-hello --json | grep -q short_id || {
+    echo "no snapshot tagged service:native-hello in $REPO"
     exit 1
 }
 """
