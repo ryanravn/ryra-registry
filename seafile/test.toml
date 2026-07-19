@@ -28,7 +28,10 @@ service = "seafile"
 [[tests.steps]]
 action = "http"
 name = "seafile-responds"
-url = "https://seafile.internal:8443"
+# ${SERVICE_URL} is the install's CONFIGURED exposure (the fixture URL
+# in sandbox runs, the box's real URL in live mode). Checks must never
+# hardcode the fixture: live mode replays them against real installs.
+url = "${SERVICE_URL}"
 service = "seafile"
 poll = { interval = 3, attempts = 60 }
 timeout = 240
@@ -37,7 +40,7 @@ timeout = 240
 # is enabled and routed through the image's built-in proxy.
 action = "http"
 name = "seafdav-requires-auth"
-url = "https://seafile.internal:8443/seafdav/"
+url = "${SERVICE_URL}/seafdav/"
 status = 401
 service = "seafile"
 poll = { interval = 3, attempts = 60 }
@@ -139,7 +142,7 @@ service = "seafile"
 [[tests.checks]]
 action = "http"
 name = "seafile-http-ready"
-url = "https://seafile.internal:8443"
+url = "${SERVICE_URL}"
 service = "seafile"
 poll = { interval = 5, attempts = 60 }
 timeout = 360
