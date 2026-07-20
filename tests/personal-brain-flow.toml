@@ -1,15 +1,14 @@
-# The business suite working together as ONE, not per-member health
-# (tests/suite-business-second-brain.toml covers that): a file uploaded to
-# seafile comes out searchable in paperless, and a box failure lands in the
-# team's own Matrix room via `ryra notify --matrix`.
+# The suite working together as ONE, not per-member health
+# (tests/suite-personal-second-brain.toml covers that): a file uploaded to
+# seafile comes out searchable in paperless.
 #
 # Cross-check state rides /tmp/brainflow-* files; consume-dir writes go
 # through `podman exec` because the :U volume belongs to the container's
 # mapped uid.
 [[tests]]
-name = "business-brain-flow"
-ram = 6144
-suite = "business-second-brain"
+name = "personal-brain-flow"
+ram = 4096
+suite = "personal-second-brain"
 
 [[tests.checks]]
 action = "shell"
@@ -63,27 +62,4 @@ for i in $(seq 1 60); do
 done
 echo "document never appeared in paperless" >&2
 exit 1
-'''
-
-[[tests.checks]]
-action = "shell"
-name = "failure-lands-in-matrix-room"
-timeout = 180
-run = '''
-set -e
-D=${RYRA_DATA_DIR:-$HOME/.local/share/services}
-. $D/synapse/.env
-HS=http://127.0.0.1:$SERVICE_PORT_HTTP
-podman exec synapse-homeserver register_new_matrix_user -u ryra-bot -p BrainBot-123 --no-admin -k "$SYNAPSE_REGISTRATION_SHARED_SECRET" http://localhost:8008
-BOT=$(curl -sf -X POST -H "Content-Type: application/json" -d '{"type":"m.login.password","identifier":{"type":"m.id.user","user":"ryra-bot"},"password":"BrainBot-123"}' $HS/_matrix/client/v3/login | python3 -c "import json,sys; print(json.load(sys.stdin)[\"access_token\"])")
-ROOM=$(curl -sf -X POST -H "Authorization: Bearer $BOT" -H "Content-Type: application/json" -d '{"name":"ops"}' $HS/_matrix/client/v3/createRoom | python3 -c "import json,sys; print(json.load(sys.stdin)[\"room_id\"])")
-ryra notify connect --matrix "$HS" --room "$ROOM" --token "$BOT"
-ryra notify test
-ok=1
-for i in $(seq 1 20); do
-  if curl -sf -H "Authorization: Bearer $BOT" "$HS/_matrix/client/v3/rooms/$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=\"\"))" "$ROOM")/messages?dir=b&limit=10" | grep -q "Ryra: test failed"; then ok=0; break; fi
-  sleep 2
-done
-ryra notify disconnect
-exit $ok
 '''
