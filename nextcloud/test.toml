@@ -200,6 +200,6 @@ spec = "nextcloud-auth.spec.ts"
 timeout = 180
 # Pin NEXTCLOUD_URL to the local test instance: the spec falls back to
 # process.env.NEXTCLOUD_URL, which on a real homelab host may point at a
-# production Nextcloud (e.g. bedrock's brain.bedrockchain.com). Setting it
+# production Nextcloud on the same network. Setting it
 # here shadows any ambient value so the browser hits the install under test.
 env = { AUTHELIA_USER = "testuser", AUTHELIA_PASSWORD = "testpassword123", NEXTCLOUD_URL = "https://nextcloud.internal:8443" }
