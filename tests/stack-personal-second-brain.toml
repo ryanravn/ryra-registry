@@ -1,11 +1,11 @@
-# The personal second-brain suite, both modes from one definition.
-# Sandbox/VM: the setup bracket is the real `ryra suite add
+# The personal second-brain stack, both modes from one definition.
+# Sandbox/VM: the setup bracket is the real `ryra stack add
 # personal-second-brain` plus a wait per member. Live: the checks run
 # against the real installs, nothing installed or removed.
 [[tests]]
-name = "suite-personal-second-brain"
+name = "stack-personal-second-brain"
 ram = 4096
-suite = "personal-second-brain"
+stack = "personal-second-brain"
 
 [[tests.checks]]
 action = "http"

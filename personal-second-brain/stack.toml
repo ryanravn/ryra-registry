@@ -1,0 +1,22 @@
+# A registry stack: a partial stack.toml in the same [[services]] grammar
+# as a box's own stack file, minus anything host-specific (no urls, no
+# secret values). `ryra stack add personal-second-brain` copy-expands
+# these entries into your stack.toml and syncs — afterwards the members
+# are ordinary services with no link back to this file.
+
+[stack]
+name = "personal-second-brain"
+description = "Your external memory: seafile holds your libraries (per-device selective sync, web editing, share links; encrypted libraries stay yours alone) and paperless-ngx archives and OCRs documents; ryra's own agent is the brain on top"
+
+# Seafile's own accounts stay primary for sync clients, so no SSO here —
+# stated per entry instead of hidden behind a defaults+gating rule.
+[[services]]
+name = "seafile"
+ref = "seafile"
+backup = true
+
+[[services]]
+name = "paperless-ngx"
+ref = "paperless-ngx"
+auth = true
+backup = true
