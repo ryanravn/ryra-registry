@@ -14,7 +14,7 @@ PublishPort=${SERVICE_PORT_HTTP}:8000
 Volume=${SERVICE_HOME}/data:/usr/src/paperless/data:Z,U
 Volume=${SERVICE_HOME}/media:/usr/src/paperless/media:Z,U
 # The consume drop-box: anything landing here is imported and OCR'd.
-# Suite integrations (e.g. a seafile inbox bridge) write into it.
+# Stack integrations (e.g. a seafile inbox bridge) write into it.
 Volume=${SERVICE_HOME}/consume:/usr/src/paperless/consume:Z,U
 EnvironmentFile=%h/.local/share/services/paperless-ngx/.env
 Pull=missing

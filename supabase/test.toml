@@ -208,16 +208,18 @@ timeout = 60
 action = "shell"
 name = "audit-snapshot-contents"
 run = """set -euo pipefail
-PREFS=${RYRA_CONFIG_DIR:-$HOME/.config/services}/preferences.toml
-RESTIC_PASSWORD=$(awk -F'"' '/^password = /{print $2; exit}' $PREFS)
-ENDPOINT=$(awk -F'"' '/^endpoint = /{print $2}' $PREFS)
-BUCKET=$(awk -F'"' '/^bucket = /{print $2}' $PREFS)
-ACCESS=$(awk -F'"' '/^access_key_id = /{print $2}' $PREFS)
-SECRET=$(awk -F'"' '/^secret_access_key = /{print $2}' $PREFS)
+CFG=${RYRA_CONFIG_DIR:-$HOME/.config/services}
+STACK=$CFG/stack.toml
+SECRETS=$CFG/secrets.env
+RESTIC_PASSWORD=$(grep '^RYRA_BACKUP_PASSWORD=' $SECRETS | cut -d= -f2-)
+ENDPOINT=$(awk -F'"' '/^endpoint = /{print $2}' $STACK)
+BUCKET=$(awk -F'"' '/^bucket = /{print $2}' $STACK)
+ACCESS=$(grep '^RYRA_BACKUP_S3_ACCESS_KEY=' $SECRETS | cut -d= -f2-)
+SECRET=$(grep '^RYRA_BACKUP_S3_SECRET_KEY=' $SECRETS | cut -d= -f2-)
 export AWS_ACCESS_KEY_ID=$ACCESS
 export AWS_SECRET_ACCESS_KEY=$SECRET
 export RESTIC_PASSWORD
-PFX=$(awk -F'"' '/^prefix = /{print $2}' $PREFS)
+PFX=$(awk -F'"' '/^prefix = /{print $2}' $STACK)
 SCHEME=${ENDPOINT%%://*}
 HOST=${ENDPOINT#*://}
 # The engine scopes each machine to a sub-prefix inside the bucket

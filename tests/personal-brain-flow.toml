@@ -1,5 +1,5 @@
-# The suite working together as ONE, not per-member health
-# (tests/suite-personal-second-brain.toml covers that): a file uploaded to
+# The stack working together as ONE, not per-member health
+# (tests/stack-personal-second-brain.toml covers that): a file uploaded to
 # seafile comes out searchable in paperless.
 #
 # Cross-check state rides /tmp/brainflow-* files; consume-dir writes go
@@ -8,7 +8,7 @@
 [[tests]]
 name = "personal-brain-flow"
 ram = 4096
-suite = "personal-second-brain"
+stack = "personal-second-brain"
 
 [[tests.checks]]
 action = "shell"

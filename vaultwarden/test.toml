@@ -1,7 +1,8 @@
 # vaultwarden tests — full lifecycle (requires HTTPS via caddy) + SMTP.
 
-# Full lifecycle: caddy for TLS, injected SMTP config so SMTP mappings
-# render, then vaultwarden + assertions including SMTP env var rendering.
+# Full lifecycle: caddy for TLS, an [smtp] relay injected into stack.toml
+# (password via secrets.env) so SMTP mappings render, then vaultwarden +
+# assertions including SMTP env var rendering.
 [[tests]]
 name = "vaultwarden"
 [[tests.steps]]
@@ -13,15 +14,18 @@ service = "caddy"
 [[tests.steps]]
 action = "shell"
 name = "inject-smtp-config"
-run = '''mkdir -p ${RYRA_CONFIG_DIR:-$HOME/.config/services} && cat >> ${RYRA_CONFIG_DIR:-$HOME/.config/services}/preferences.toml <<'TOML'
+run = '''CFG=${RYRA_CONFIG_DIR:-$HOME/.config/services}
+mkdir -p $CFG
+cat >> $CFG/stack.toml <<'TOML'
 
 [smtp]
 host = "localhost"
 port = 1025
 username = "test"
-password = "test"
 from = "noreply@example.com"
-TOML'''
+TOML
+printf 'RYRA_SMTP_PASSWORD=test\n' >> $CFG/secrets.env
+chmod 600 $CFG/secrets.env'''
 [[tests.steps]]
 action = "add"
 service = "vaultwarden"

@@ -1,5 +1,5 @@
 # End-to-end test for `ryra configure` with no service argument: edit global
-# preferences and propagate them into installed services.
+# settings in stack.toml and propagate them into installed services.
 #
 # Vikunja is the ideal fixture because a single service exercises both halves
 # of the contract:

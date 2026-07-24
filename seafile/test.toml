@@ -96,7 +96,7 @@ echo "the fuse marker FUSEPROBE42" > /tmp/fuseprobe.txt
 UP=$(curl -sf -H "Authorization: Token $TOK" "$SF/api2/repos/$REPO/upload-link/" | tr -d '"')
 HP=$(python3 -c "import urllib.parse,sys; u=urllib.parse.urlparse(sys.argv[1]); print(str(u.hostname)+chr(58)+str(u.port or 443))" "$UP")
 # -k: TLS verification is not this check's subject (the https checks
-# above cover the route); the CA export only exists in suite tests.
+# above cover the route); the CA export only exists in stack tests.
 curl -sfk --resolve "$HP:127.0.0.1" -F file=@/tmp/fuseprobe.txt -F parent_dir=/ "$UP" > /dev/null
 # The fuse tree is /seaf-fuse/<user>/<repo-id>_<repo-name>/...; poll a
 # few times, the mount refreshes lazily on first traversal.

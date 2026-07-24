@@ -3,7 +3,7 @@
 # plants a sentinel, runs a FULL `ryra backup manual` (whole-folder
 # snapshot), then *destroys* the vikunja install entirely (data, config,
 # quadlets, metadata) — simulating a fresh server that still has only
-# its preferences.toml — and runs the no-arg restore. The service must
+# its global config — and runs the no-arg restore. The service must
 # come back from nothing: folder relaid, quadlet relinked, unit started,
 # sentinel intact.
 [test]
@@ -38,8 +38,8 @@ service = "minio"
 poll = { interval = 2, attempts = 60 }
 timeout = 180
 
-# Configure the repo. preferences.toml now holds the repo creds — the
-# one artifact a "new machine" keeps.
+# Configure the repo. stack.toml + secrets.env now hold the repo config
+# and creds — the artifacts a "new machine" keeps.
 [[steps]]
 action = "shell"
 name = "configure-backup"
@@ -87,7 +87,7 @@ ryra backup list vikunja | grep -qi 'vikunja'
 timeout = 300
 
 # DESTROY the vikunja install — simulate a bare machine. Keep
-# preferences.toml (repo creds) and minio (the local repo backend).
+# the global config (repo creds) and minio (the local repo backend).
 [[steps]]
 action = "shell"
 name = "wipe-install"
@@ -109,7 +109,7 @@ timeout = 60
 # Recover: ryra 0.9.14 `backup restore` needs an installed service (or a
 # snapshot id) — it rehydrates data, it doesn't re-create a missing install.
 # So bare-metal DR is reinstall-then-restore: the snapshot still lists from
-# the repo (preferences.toml is the kept artifact), reinstall, then restore.
+# the repo (the global config files are the kept artifacts), reinstall, then restore.
 [[steps]]
 action = "shell"
 name = "dr-restore"
