@@ -11,7 +11,7 @@ name: CI
 #     HEAD~1 on main push) and emits two lists: changed service folders
 #     and changed cross-cutting tests under tests/.
 #
-#  3. e2e-service / e2e-test — matrix jobs that run `ryra test --no-vm`
+#  3. e2e-service / e2e-test — matrix jobs that run host-mode `ryra test`
 #     for each changed item. Skip a service whose test.toml is empty or
 #     missing (the workflow warns via ::notice:: but doesn't fail —
 #     tests aren't mandatory in this registry).
@@ -180,7 +180,7 @@ jobs:
           podman --version
 
           # Browser SSO tests (*-auth.spec.ts) run via bun + playwright. The VM
-          # image ships these at /opt/playwright; the --no-vm runner doesn't, so
+          # image ships these at /opt/playwright; the host-mode runner doesn't, so
           # install bun and the chromium browser here.
           curl -fsSL https://bun.sh/install | bash
           echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
@@ -195,13 +195,13 @@ jobs:
           sleep 2
 
       - if: steps.gate.outputs.skip != 'true'
-        name: ryra test --no-vm ${{ matrix.service }}
+        name: ryra test ${{ matrix.service }}
         env:
           RYRA_REGISTRY_DIR: ${{ github.workspace }}
         run: |
           ln -s . registry
           export XDG_RUNTIME_DIR="/run/user/$(id -u)"
-          ryra test --no-vm --yes "${{ matrix.service }}"
+          ryra test --yes "${{ matrix.service }}"
 
   e2e-test:
     needs: [validate, detect-changes]
@@ -240,7 +240,7 @@ jobs:
           podman --version
 
           # Browser SSO tests (*-auth.spec.ts) run via bun + playwright. The VM
-          # image ships these at /opt/playwright; the --no-vm runner doesn't, so
+          # image ships these at /opt/playwright; the host-mode runner doesn't, so
           # install bun and the chromium browser here.
           curl -fsSL https://bun.sh/install | bash
           echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
@@ -250,10 +250,10 @@ jobs:
           sudo loginctl enable-linger "$USER"
           sleep 2
 
-      - name: ryra test --no-vm ${{ matrix.test }}
+      - name: ryra test ${{ matrix.test }}
         env:
           RYRA_REGISTRY_DIR: ${{ github.workspace }}
         run: |
           ln -s . registry
           export XDG_RUNTIME_DIR="/run/user/$(id -u)"
-          ryra test --no-vm --yes "${{ matrix.test }}"
+          ryra test --yes "${{ matrix.test }}"
