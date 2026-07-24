@@ -36,6 +36,9 @@ timeout = 600
 [[tests.steps]]
 action = "wait"
 service = "paperless-ngx"
+# First boot runs Django migrations + celery warmup: same budget the
+# basic test's wait uses.
+timeout = 330
 [[tests.steps]]
 action = "http"
 name = "paperless-responds"
@@ -88,6 +91,9 @@ timeout = 300
 [[tests.setup]]
 action = "wait"
 service = "paperless-ngx"
+# First boot runs Django migrations + celery warmup: same budget the
+# basic test's wait uses.
+timeout = 330
 [[tests.checks]]
 action = "http"
 # Mirrors the basic test's window. Paperless's first-boot Django
