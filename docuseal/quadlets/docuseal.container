@@ -5,7 +5,7 @@ StartLimitBurst=3
 After=network-online.target
 
 [Container]
-Image=docker.io/docuseal/docuseal:2.4.4
+Image=docker.io/docuseal/docuseal:3.2.1
 ContainerName=docuseal
 Network=docuseal.network
 PublishPort=${SERVICE_PORT_HTTP}:3000
